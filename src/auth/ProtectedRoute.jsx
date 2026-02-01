@@ -1,25 +1,44 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
+import React from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuthStore } from "../store/authStore";
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { isAuthenticated, user, isTrialExpired } = useAuthStore();
   const location = useLocation();
 
-  // 1. Check if logged in
+  const { isAuthenticated, user, isTrialExpired, isHydrated } = useAuthStore();
+
+  // Only block if isHydrated exists and is false
+  if (typeof isHydrated === "boolean" && isHydrated === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-500 font-bold">
+        Loading session...
+      </div>
+    );
+  }
+
+  const path = location.pathname;
+  const isPublicPath = path === "/login" || path === "/register";
+  const isUpgradePath = path === "/upgrade";
+  const isUnauthorizedPath = path === "/unauthorized";
+
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    if (isPublicPath) return children;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // 2. Check Role Permissions
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
-    return <Navigate to="/unauthorized" replace />;
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // 3. Check Trial Expiration (Block access to operational tools if expired)
-  // Super-admins are exempt from trial checks
-  if (isTrialExpired && user?.role !== 'super-admin' && location.pathname !== '/upgrade') {
-    return <Navigate to="/upgrade" replace />;
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    if (isUnauthorizedPath) return children;
+    return <Navigate to="/unauthorized" replace state={{ from: location }} />;
+  }
+
+  if (isTrialExpired && user.role !== "super-admin") {
+    if (!isUpgradePath) {
+      return <Navigate to="/upgrade" replace state={{ from: location }} />;
+    }
   }
 
   return children;

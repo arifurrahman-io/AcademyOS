@@ -1,174 +1,264 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { School, Globe, Mail, Lock, Phone, ShieldCheck } from 'lucide-react';
-import toast from 'react-hot-toast';
-import api from '../services/api';
-import Button from '../components/Button';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import {
+  School,
+  Globe,
+  Mail,
+  Lock,
+  Phone,
+  ShieldCheck,
+  ArrowRight,
+} from "lucide-react";
+import toast from "react-hot-toast";
+import api from "../services/api";
+import Button from "../components/Button";
 
 const Register = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    slug: '',
-    email: '',
-    password: '',
-    contactNumber: ''
+    name: "",
+    slug: "",
+    email: "",
+    password: "",
+    contactNumber: "",
   });
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
+
     try {
       /**
-       * Hits the updated backend registration endpoint
-       * This creates the CoachingCenter and the Admin User simultaneously.
+       * Payload aligned with coaching.service.js createCenter(data)
+       * Service expects: name, slug, adminEmail, adminPassword, phone
        */
-      await api.post('/auth/register-center', {
+      const payload = {
         name: formData.name,
         slug: formData.slug,
-        email: formData.email,
-        password: formData.password,
-        settings: {
-          contactNumber: formData.contactNumber
-        }
-      });
+        adminEmail: formData.email, // Mapped to service 'adminEmail'
+        adminPassword: formData.password, // Mapped to service 'adminPassword'
+        phone: formData.contactNumber, // Mapped to service 'phone'
+      };
 
-      toast.success("Center registered successfully!");
-      // Redirect to login so the new admin can sign in
-      navigate('/login'); 
+      await api.post("/auth/register-center", payload);
+
+      toast.success("Institute successfully provisioned!");
+      navigate("/login");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Registration failed");
+      // Catch specific errors like "Subdomain already in use"
+      const msg =
+        err.response?.data?.message ||
+        "Registration failed. Try a different slug.";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 px-4 py-12">
-      <div className="max-w-xl w-full">
-        {/* Branding */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200 mb-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-4 py-12">
+      <div className="max-w-2xl w-full">
+        {/* Top Branding */}
+        <div className="flex flex-col items-center mb-10">
+          <div className="p-4 bg-slate-900 rounded-[1.5rem] text-white shadow-2xl mb-4">
             <School size={32} />
           </div>
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight">AcademyOS</h2>
-          <p className="mt-2 text-slate-500 font-medium">Launch your multi-tenant coaching platform</p>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">
+            Academy<span className="text-blue-600">OS</span>
+          </h1>
+          <p className="text-slate-500 font-bold text-xs uppercase tracking-[0.2em] mt-2">
+            Multi-Tenant Infrastructure
+          </p>
         </div>
 
-        {/* Register Card */}
-        <div className="bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-xl shadow-slate-200/60 border border-white">
-          <div className="mb-8">
-            <h3 className="text-xl font-bold text-slate-800">Create Your Center</h3>
-            <p className="text-sm text-slate-500">Register your institute to start your 7-day free trial</p>
-          </div>
-
-          <form onSubmit={handleRegister} className="space-y-6">
-            {/* Institute Details Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700 ml-1">Coaching Name</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
-                    <School size={18} />
-                  </div>
-                  <input 
-                    required
-                    placeholder="Arif's Teaching"
-                    className="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
-                    onChange={e => setFormData({...formData, name: e.target.value})}
-                  />
-                </div>
+        {/* Card Container */}
+        <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-5">
+            {/* Left Sidebar Info (Visual only) */}
+            <div className="hidden md:flex md:col-span-2 bg-slate-900 p-8 flex-col justify-between text-white">
+              <div>
+                <h3 className="text-xl font-bold leading-tight mb-4">
+                  Launch your digital campus in seconds.
+                </h3>
+                <ul className="space-y-4">
+                  {[
+                    "Isolated Tenant Database",
+                    "Automated Tuition Logic",
+                    "Staff Access Control",
+                    "Instant PDF Reports",
+                  ].map((item, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400"
+                    >
+                      <ShieldCheck size={14} className="text-blue-500" /> {item}
+                    </li>
+                  ))}
+                </ul>
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700 ml-1">URL Slug</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
-                    <Globe size={18} />
-                  </div>
-                  <input 
-                    required
-                    placeholder="arifs-teaching"
-                    className="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
-                    onChange={e => setFormData({...formData, slug: e.target.value})}
-                  />
-                </div>
+              <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                <p className="text-[10px] font-bold text-blue-400 uppercase mb-1">
+                  Trial Policy
+                </p>
+                <p className="text-xs text-slate-300">
+                  7 Days of full premium access included with every new node.
+                </p>
               </div>
             </div>
 
-            {/* Admin Credentials Section */}
-            <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100 space-y-5">
-              <div className="flex items-center gap-2 text-blue-600 font-bold text-sm">
-                <ShieldCheck size={18} /> Admin Account Credentials
+            {/* Right Form Area */}
+            <div className="md:col-span-3 p-8 lg:p-10">
+              <div className="mb-8">
+                <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                  Provision New Node
+                </h2>
+                <p className="text-sm text-slate-500 font-medium">
+                  Enter your institute credentials below.
+                </p>
               </div>
-              
-              <div className="space-y-4">
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
-                    <Mail size={18} />
+
+              <form onSubmit={handleRegister} className="space-y-5">
+                <div className="space-y-4">
+                  {/* Institute Name */}
+                  <div className="group">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
+                      Coaching Identity
+                    </label>
+                    <div className="relative">
+                      <School
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
+                        size={18}
+                      />
+                      <input
+                        required
+                        placeholder="Institute Name"
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:bg-white focus:ring-4 ring-blue-500/5 focus:border-blue-500/30 transition-all"
+                        onChange={(e) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                      />
+                    </div>
                   </div>
-                  <input 
-                    type="email"
-                    required
-                    placeholder="admin@yourcenter.com"
-                    className="block w-full pl-10 pr-4 py-3 bg-white border border-blue-100 rounded-2xl text-slate-900 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
-                    onChange={e => setFormData({...formData, email: e.target.value})}
-                  />
+
+                  {/* Slug */}
+                  <div className="group">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
+                      Instance Subdomain
+                    </label>
+                    <div className="relative">
+                      <Globe
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
+                        size={18}
+                      />
+                      <input
+                        required
+                        placeholder="unique-slug"
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:bg-white focus:ring-4 ring-blue-500/5 focus:border-blue-500/30 transition-all"
+                        onChange={(e) =>
+                          setFormData({ ...formData, slug: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div className="group">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
+                      Root Admin Email
+                    </label>
+                    <div className="relative">
+                      <Mail
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
+                        size={18}
+                      />
+                      <input
+                        type="email"
+                        required
+                        placeholder="admin@institute.com"
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:bg-white focus:ring-4 ring-blue-500/5 focus:border-blue-500/30 transition-all"
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password */}
+                  <div className="group">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
+                      Security Secret
+                    </label>
+                    <div className="relative">
+                      <Lock
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
+                        size={18}
+                      />
+                      <input
+                        type="password"
+                        required
+                        placeholder="••••••••"
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:bg-white focus:ring-4 ring-blue-500/5 focus:border-blue-500/30 transition-all"
+                        onChange={(e) =>
+                          setFormData({ ...formData, password: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  <div className="group">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
+                      Support Contact
+                    </label>
+                    <div className="relative">
+                      <Phone
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
+                        size={18}
+                      />
+                      <input
+                        type="tel"
+                        required
+                        placeholder="+880..."
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:bg-white focus:ring-4 ring-blue-500/5 focus:border-blue-500/30 transition-all"
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            contactNumber: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
-                    <Lock size={18} />
-                  </div>
-                  <input 
-                    type="password"
-                    required
-                    placeholder="Choose a strong password"
-                    className="block w-full pl-10 pr-4 py-3 bg-white border border-blue-100 rounded-2xl text-slate-900 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
-                    onChange={e => setFormData({...formData, password: e.target.value})}
+                <Button
+                  type="submit"
+                  isLoading={loading}
+                  className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-slate-900 text-white font-black uppercase tracking-widest text-[11px] shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-2 group"
+                >
+                  Deploy Instance{" "}
+                  <ArrowRight
+                    size={16}
+                    className="group-hover:translate-x-1 transition-transform"
                   />
-                </div>
+                </Button>
+              </form>
+
+              <div className="mt-8 text-center">
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-tighter">
+                  Already registered?{" "}
+                  <Link
+                    to="/login"
+                    className="text-blue-600 hover:text-slate-900 transition-colors"
+                  >
+                    Access Portal
+                  </Link>
+                </p>
               </div>
             </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 ml-1">Contact Number</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
-                  <Phone size={18} />
-                </div>
-                <input 
-                  type="tel"
-                  placeholder="+880 1234 567890"
-                  className="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
-                  onChange={e => setFormData({...formData, contactNumber: e.target.value})}
-                />
-              </div>
-            </div>
-
-            <Button 
-              type="submit" 
-              isLoading={loading} 
-              className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 transition-all active:scale-[0.98]"
-            >
-              Initialize My Center
-            </Button>
-          </form>
-
-          <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-            <p className="text-sm text-slate-500 font-medium">
-              Already have an account? {' '}
-              <Link to="/login" className="font-bold text-blue-600 hover:text-blue-700 transition-colors">
-                Sign In
-              </Link>
-            </p>
           </div>
         </div>
-
-        <p className="mt-8 text-center text-xs text-slate-400 font-medium uppercase tracking-widest">
-          Secured by AcademyOS Multi-tenant Protocol
-        </p>
       </div>
     </div>
   );
