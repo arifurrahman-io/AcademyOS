@@ -22,6 +22,7 @@ import CentersManagement from "../dashboard/CentersManagement";
 
 import Unauthorized from "../pages/Unauthorized";
 import NotFound from "../pages/NotFound";
+import SuperAdminPaymentsManagement from "../dashboard/SuperAdminPaymentsManagement";
 
 /**
  * Smart default redirect:
@@ -89,6 +90,10 @@ export const router = createBrowserRouter([
         path: "centers",
         element: <CentersManagement />,
       },
+      {
+        path: "payments",
+        element: <SuperAdminPaymentsManagement />,
+      },
       // add future routes here:
       // { path: "payments", element: <PaymentsPage /> },
     ],
@@ -120,7 +125,14 @@ export const router = createBrowserRouter([
       { path: "payments/defaulters", element: <DefaulterList /> },
 
       // Setup
-      { path: "setup", element: <SetupCenter /> },
+      {
+        path: "setup",
+        element: (
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <SetupCenter />
+          </ProtectedRoute>
+        ),
+      },
     ],
   },
 

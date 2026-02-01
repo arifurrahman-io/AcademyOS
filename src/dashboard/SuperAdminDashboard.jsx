@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   School,
@@ -13,14 +19,14 @@ import {
   TrendingUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import api from "../services/api";
 import Loader from "../components/Loader";
 import { useAuthStore } from "../store/authStore";
+import api from "../services/api";
 
 const SuperAdminDashboard = () => {
-  // ✅ Separate data sources
-  const [centers, setCenters] = useState([]); // CRUD-safe (has _id)
-  const [monitor, setMonitor] = useState([]); // dashboard summary (may not have _id)
+  // ✅ Data sources
+  const [centers, setCenters] = useState([]);
+  const [monitor, setMonitor] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -30,65 +36,114 @@ const SuperAdminDashboard = () => {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
 
-  // ✅ Fetch CRUD list (must include _id)
-  const fetchCenters = async () => {
-    const res = await api.get("/coaching/all");
-    // res.data = { success, data: [...] }
-    setCenters(res.data?.data || []);
-  };
+  // ✅ Prevent double fetch in React StrictMode (dev)
+  const didInitRef = useRef(false);
 
-  // ✅ Fetch dashboard monitor (optional fields)
-  const fetchMonitor = async () => {
-    const res = await api.get("/subscriptions/monitor-all");
-    setMonitor(res.data?.data || []);
-  };
-
-  // ✅ Single refresh function used by child pages
-  const refresh = async (showToast = false) => {
-    if (showToast) setIsRefreshing(true);
-
-    try {
-      await Promise.all([fetchCenters(), fetchMonitor()]);
-      if (showToast) toast.success("System metrics synchronized");
-    } catch (err) {
-      const message = err.response?.data?.message || "Connection to API failed";
-      toast.error(message);
-      if (err.response?.status === 401) navigate("/login");
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    refresh(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const normalizeArray = useCallback((payload) => {
+    // supports: [..] OR {data:[..]} OR {data:{items:[..]}} OR {items:[..]}
+    if (!payload) return [];
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload.data)) return payload.data;
+    if (Array.isArray(payload.items)) return payload.items;
+    if (payload.data) return normalizeArray(payload.data);
+    return [];
   }, []);
 
-  const handleLogout = () => {
+  /**
+   * ✅ Fetch centers (CRUD list)
+   * GET /api/v1/coaching/all
+   */
+  const fetchCenters = useCallback(async () => {
+    const res = await api.get("/coaching/all", {
+      // stop caching weirdness in devtools (optional)
+      headers: { "Cache-Control": "no-cache" },
+    });
+    const arr = normalizeArray(res.data);
+    setCenters(arr);
+  }, [normalizeArray]);
+
+  /**
+   * ✅ Fetch monitor metrics
+   * GET /api/v1/subscriptions/monitor-all
+   */
+  const fetchMonitor = useCallback(async () => {
+    const res = await api.get("/subscriptions/monitor-all", {
+      headers: { "Cache-Control": "no-cache" },
+    });
+
+    // allow multiple shapes safely
+    const arr = normalizeArray(res.data) || res.data?.data || [];
+    setMonitor(Array.isArray(arr) ? arr : []);
+  }, [normalizeArray]);
+
+  /**
+   * ✅ Single refresh function used by child pages
+   */
+  const refresh = useCallback(
+    async (showToast = false) => {
+      if (showToast) setIsRefreshing(true);
+      if (!showToast) setLoading(true);
+
+      try {
+        await Promise.all([fetchCenters(), fetchMonitor()]);
+        if (showToast) toast.success("System metrics synchronized");
+      } catch (err) {
+        const status = err?.response?.status;
+        const message =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Connection to API failed";
+
+        console.error("REFRESH ERROR:", status, message);
+        toast.error(message);
+
+        // axios interceptor handles 401/403, but keep fallback
+        if (status === 401) navigate("/login", { replace: true });
+      } finally {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [fetchCenters, fetchMonitor, navigate],
+  );
+
+  /**
+   * ✅ Initial load (ONLY once)
+   */
+  useEffect(() => {
+    // React StrictMode dev: effect can run twice. Prevent it.
+    if (didInitRef.current) return;
+    didInitRef.current = true;
+
+    refresh(false);
+  }, [refresh]);
+
+  const handleLogout = useCallback(() => {
     logout();
     toast.success("Root session terminated");
-    navigate("/login");
-  };
+    navigate("/login", { replace: true });
+  }, [logout, navigate]);
 
   const isOverview =
     location.pathname === "/super-admin" ||
     location.pathname === "/super-admin/dashboard";
 
-  // ✅ Overview metrics should be computed from centers (DB truth)
+  /**
+   * ✅ Overview metrics (DB truth)
+   */
   const { totalCenters, liveTrials, paidCenters } = useMemo(() => {
     const now = new Date();
 
-    const total = centers.length;
+    const total = Array.isArray(centers) ? centers.length : 0;
 
-    const trialsLive = centers.filter(
-      (c) =>
-        c.subscriptionStatus === "trial" &&
-        c.trialExpiryDate &&
-        new Date(c.trialExpiryDate) > now,
+    const trialsLive = (Array.isArray(centers) ? centers : []).filter((c) => {
+      const exp = c?.trialExpiryDate ? new Date(c.trialExpiryDate) : null;
+      return c?.subscriptionStatus === "trial" && exp && exp > now;
+    }).length;
+
+    const paid = (Array.isArray(centers) ? centers : []).filter(
+      (c) => c?.subscriptionStatus === "paid",
     ).length;
-
-    const paid = centers.filter((c) => c.subscriptionStatus === "paid").length;
 
     return { totalCenters: total, liveTrials: trialsLive, paidCenters: paid };
   }, [centers]);
@@ -125,9 +180,11 @@ const SuperAdminDashboard = () => {
                 </span>
               </div>
             </div>
+
             <button
               className="lg:hidden text-slate-400 hover:text-white"
               onClick={() => setIsMobileMenuOpen(false)}
+              aria-label="Close Menu"
             >
               <X size={24} />
             </button>
@@ -145,14 +202,14 @@ const SuperAdminDashboard = () => {
               to="/super-admin/centers"
               icon={<School size={20} />}
               label="Institutes"
-              active={location.pathname === "/super-admin/centers"}
+              active={location.pathname.startsWith("/super-admin/centers")}
               onClick={() => setIsMobileMenuOpen(false)}
             />
             <SidebarLink
               to="/super-admin/payments"
               icon={<CreditCard size={20} />}
               label="Billing & Subs"
-              active={location.pathname === "/super-admin/payments"}
+              active={location.pathname.startsWith("/super-admin/payments")}
               onClick={() => setIsMobileMenuOpen(false)}
             />
           </nav>
@@ -179,9 +236,11 @@ const SuperAdminDashboard = () => {
             <button
               className="p-2.5 text-slate-600 lg:hidden hover:bg-slate-100 rounded-xl transition-all"
               onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Open Menu"
             >
               <Menu size={24} />
             </button>
+
             <div className="hidden sm:block">
               <h2 className="text-xl font-black text-slate-800 tracking-tight">
                 {isOverview ? "Command Center" : "Institute Management"}
@@ -208,8 +267,8 @@ const SuperAdminDashboard = () => {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6 lg:p-10 scroll-smooth">
-          {/* ✅ IMPORTANT: pass centers (CRUD) to child pages */}
-          <Outlet context={{ stats: centers, refresh }} />
+          {/* ✅ Pass both centers + monitor + refresh */}
+          <Outlet context={{ centers, monitor, refresh }} />
 
           {isOverview && (
             <div className="max-w-7xl mx-auto space-y-10 animate-in fade-in slide-in-from-top-4 duration-700">
@@ -222,6 +281,7 @@ const SuperAdminDashboard = () => {
                     Aggregated metrics across all coaching centers.
                   </p>
                 </div>
+
                 <div className="px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-xs font-black flex items-center gap-2 border border-blue-100">
                   <TrendingUp size={14} /> +12% Growth this month
                 </div>
@@ -257,8 +317,6 @@ const SuperAdminDashboard = () => {
                   trend="Secured"
                 />
               </div>
-
-              {/* You can still use `monitor` data somewhere if needed */}
             </div>
           )}
         </main>
@@ -311,9 +369,11 @@ const StatCard = ({ icon, label, value, color, trend }) => {
       >
         {React.cloneElement(icon, { size: 28 })}
       </div>
+
       <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
         {label}
       </p>
+
       <div className="flex items-baseline gap-2">
         <p className="text-4xl font-black text-slate-900 tracking-tighter">
           {value}
@@ -322,6 +382,7 @@ const StatCard = ({ icon, label, value, color, trend }) => {
           <span className="text-[10px] font-bold text-slate-400">{trend}</span>
         ) : null}
       </div>
+
       <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-slate-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
     </div>
   );

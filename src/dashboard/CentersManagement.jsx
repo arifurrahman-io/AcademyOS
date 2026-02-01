@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
   Plus,
@@ -18,8 +18,26 @@ import Button from "../components/Button";
 import Modal from "../components/Modal";
 import api from "../services/api";
 
+const getId = (node) => node?._id || node?.id || node?.centerId || null;
+
+const normalizeCenters = (payload) => {
+  // payload can be: [] OR {success,data:[...]} OR {success,data:{items:[...]}}
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.items)) return payload.items;
+  if (payload.data) return normalizeCenters(payload.data);
+  return [];
+};
+
 const CentersManagement = () => {
-  const { stats, refresh } = useOutletContext();
+  const outlet = useOutletContext() || {};
+  const refreshFromLayout = outlet.refresh;
+  const stats = outlet.stats;
+
+  const [localCenters, setLocalCenters] = useState([]);
+  const [bootLoading, setBootLoading] = useState(false);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedCenter, setSelectedCenter] = useState(null);
@@ -32,34 +50,77 @@ const CentersManagement = () => {
     adminPassword: "",
     subscriptionStatus: "trial",
     paymentProcessed: true,
-    phone: "", // ✅ add phone to form
+    phone: "",
   });
 
-  /**
-   * ✅ IMPORTANT:
-   * After fixing SuperAdminDashboard, `stats` should already be an ARRAY from /coaching/all.
-   * But we still support older shapes safely.
-   */
-  const rawNodes = useMemo(() => {
-    if (Array.isArray(stats)) return stats;
-    if (Array.isArray(stats?.data)) return stats.data;
-    if (Array.isArray(stats?.centers)) return stats.centers;
-    return [];
+  // ✅ fallback fetch if outlet stats are empty/undefined
+  const bootstrap = async () => {
+    setBootLoading(true);
+
+    // hard timeout so UI never hangs
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 8000);
+
+    try {
+      const res = await api.get("/coaching/all", {
+        signal: controller.signal,
+        timeout: 8000, // axios timeout as well
+      });
+
+      const arr = normalizeCenters(res.data);
+      setLocalCenters(arr);
+    } catch (err) {
+      const isAbort =
+        err?.name === "CanceledError" ||
+        err?.code === "ERR_CANCELED" ||
+        err?.message?.toLowerCase?.().includes("canceled");
+
+      const msg = isAbort
+        ? "API timeout. Backend not responding."
+        : err.response?.data?.message || "Failed to load centers";
+
+      console.error("BOOTSTRAP ERROR:", err);
+      toast.error(msg);
+    } finally {
+      clearTimeout(t);
+      setBootLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const arr = normalizeCenters(stats);
+    // if layout passed centers -> use it
+    if (arr.length > 0) {
+      setLocalCenters(arr);
+      return;
+    }
+    // otherwise fallback fetch
+    bootstrap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stats]);
 
-  /**
-   * Normalize IDs + normalize phone so UI always shows correctly.
-   * Backend /coaching/all returns `phone` at root (not inside settings).
-   */
   const nodes = useMemo(() => {
-    return rawNodes.map((n) => ({
-      ...n,
-      _id: n?._id ?? n?.id ?? n?.centerId ?? null,
-      // ✅ normalize phone so UI can display even if API changes
-      phone:
-        n?.phone ?? n?.settings?.contactNumber ?? n?.settings?.phone ?? "N/A",
-    }));
-  }, [rawNodes]);
+    return (localCenters || []).map((n) => ({ ...n, _id: getId(n) }));
+  }, [localCenters]);
+
+  const filteredNodes = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return nodes;
+    return nodes.filter(
+      (n) =>
+        n?.name?.toLowerCase().includes(q) ||
+        n?.slug?.toLowerCase().includes(q) ||
+        n?.email?.toLowerCase().includes(q),
+    );
+  }, [nodes, searchTerm]);
+
+  const safeRefresh = async () => {
+    if (typeof refreshFromLayout === "function") {
+      await refreshFromLayout(true);
+    } else {
+      await bootstrap();
+    }
+  };
 
   const handleOpenModal = (center = null) => {
     if (center) {
@@ -67,11 +128,11 @@ const CentersManagement = () => {
       setFormData({
         name: center.name || "",
         slug: center.slug || "",
-        adminEmail: center.email || "",
+        adminEmail: center.email || center.adminEmail || "",
         subscriptionStatus: center.subscriptionStatus || "trial",
         paymentProcessed: center.paymentProcessed ?? true,
         adminPassword: "",
-        phone: center.phone ?? center.settings?.contactNumber ?? "", // ✅ preload phone
+        phone: center.phone || center.settings?.contactNumber || "",
       });
     } else {
       setSelectedCenter(null);
@@ -92,7 +153,6 @@ const CentersManagement = () => {
     e.preventDefault();
     setLoading(true);
 
-    // ✅ payload aligned with backend
     const payload = {
       name: formData.name,
       slug: formData.slug,
@@ -100,75 +160,55 @@ const CentersManagement = () => {
       adminPassword: formData.adminPassword,
       subscriptionStatus: formData.subscriptionStatus,
       paymentProcessed: formData.paymentProcessed,
-      phone: formData.phone || "", // ✅ this maps to settings.contactNumber in service/update
+      phone: formData.phone,
     };
 
     try {
       if (selectedCenter?._id) {
         await api.put(`/coaching/${selectedCenter._id}`, payload);
-        toast.success("Infrastructure provision updated");
+        toast.success("Center updated");
       } else {
         await api.post("/coaching/register", payload);
-        toast.success("New node successfully established");
+        toast.success("Center created");
       }
-
-      await refresh();
       setIsModalOpen(false);
+      await safeRefresh();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Deployment failed");
+      toast.error(err.response?.data?.message || "Save failed");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id, node) => {
-    if (!id) {
-      console.error("DELETE FAILED – FULL NODE:", node);
-      return toast.error("System Error: Node ID Missing");
-    }
+  const handleDelete = async (node) => {
+    const id = getId(node);
+    if (!id) return toast.error("System Error: Node ID Missing");
+
     if (
-      !window.confirm(
-        "Permanent Deletion: All node data will be purged. Continue?",
-      )
+      !window.confirm("Permanent Deletion: All data will be purged. Continue?")
     )
       return;
 
     try {
       await api.delete(`/coaching/${id}`);
-      toast.success("Instance decommissioned");
-      await refresh();
+      toast.success("Center deleted");
+      await safeRefresh();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Wipe operation failed");
+      toast.error(err.response?.data?.message || "Delete failed");
     }
   };
 
-  const filteredNodes = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    if (!term) return nodes;
-    return nodes.filter(
-      (n) =>
-        n.name?.toLowerCase().includes(term) ||
-        n.slug?.toLowerCase().includes(term) ||
-        n.email?.toLowerCase().includes(term),
-    );
-  }, [nodes, searchTerm]);
-
   const getTrialStatus = (expiryDate) => {
     if (!expiryDate) return { percent: 0, color: "bg-slate-200", remaining: 0 };
-
     const total = 14;
     const now = new Date();
     const expiry = new Date(expiryDate);
-
     const diffTime = expiry - now;
     const remaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
     const percent = Math.min(100, Math.max(0, (remaining / total) * 100));
-
     let color = "bg-emerald-500";
     if (percent < 30) color = "bg-rose-500";
     else if (percent < 60) color = "bg-amber-500";
-
     return { percent, color, remaining: Math.max(0, remaining) };
   };
 
@@ -204,6 +244,7 @@ const CentersManagement = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+
           <button
             onClick={() => handleOpenModal()}
             className="flex items-center gap-2 bg-slate-900 hover:bg-indigo-600 text-white px-6 py-3.5 rounded-2xl font-bold text-sm transition-all shadow-lg"
@@ -212,156 +253,173 @@ const CentersManagement = () => {
           </button>
         </div>
       </div>
-
-      {/* Table */}
+      {/* Body */}
       <div className="bg-white rounded-[2rem] border border-slate-200/60 overflow-hidden shadow-sm overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[1000px]">
-          <thead>
-            <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                Instance Info
-              </th>
-              <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                Access Point
-              </th>
-              <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                License
-              </th>
-              <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                Trial Health
-              </th>
-              <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                Command
-              </th>
-            </tr>
-          </thead>
+        {bootLoading ? (
+          <div className="p-10 text-slate-500 font-semibold flex items-center justify-between">
+            <span>Loading centers...</span>
+            <button
+              onClick={bootstrap}
+              className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <table className="w-full text-left border-collapse min-w-[1000px]">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                  Instance Info
+                </th>
+                <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                  Access Point
+                </th>
+                <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                  License
+                </th>
+                <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                  Trial Health
+                </th>
+                <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                  Command
+                </th>
+              </tr>
+            </thead>
 
-          <tbody className="divide-y divide-slate-50">
-            {filteredNodes.map((node, index) => {
-              const trial = getTrialStatus(node.trialExpiryDate);
-              const avatarChar = (node.name || "?").charAt(0).toUpperCase();
+            <tbody className="divide-y divide-slate-50">
+              {filteredNodes.map((node, index) => {
+                const id = getId(node);
+                const trial = getTrialStatus(node.trialExpiryDate);
+                const phone =
+                  node.phone || node.settings?.contactNumber || "N/A";
 
-              return (
-                <tr
-                  key={node._id || `node-${index}`}
-                  className="hover:bg-slate-50/80 transition-colors group"
-                >
-                  {/* Instance Info */}
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-bold shadow-md">
-                        {avatarChar}
-                      </div>
-                      <div>
-                        <div className="font-bold text-slate-900 flex items-center gap-2">
-                          {node.name}
-                          {node.slug ? (
-                            <a
-                              href={`https://${node.slug}.academyos.com`}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              <ExternalLink
-                                size={12}
-                                className="text-slate-300 hover:text-indigo-500"
-                              />
-                            </a>
-                          ) : null}
+                return (
+                  <tr
+                    key={id || `node-${index}`}
+                    className="hover:bg-slate-50/80 transition-colors group"
+                  >
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-bold shadow-md">
+                          {(node.name || "?").charAt(0)}
                         </div>
-                        <div className="text-[10px] font-medium text-slate-400 flex items-center gap-1">
-                          <Zap size={10} className="text-amber-500" />{" "}
-                          {node.slug ? `${node.slug}.academyos.com` : "—"}
+                        <div>
+                          <div className="font-bold text-slate-900 flex items-center gap-2">
+                            {node.name || "—"}
+                            {node.slug && (
+                              <a
+                                href={`https://${node.slug}.academyos.com`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <ExternalLink
+                                  size={12}
+                                  className="text-slate-300 hover:text-indigo-500"
+                                />
+                              </a>
+                            )}
+                          </div>
+                          <div className="text-[10px] font-medium text-slate-400 flex items-center gap-1">
+                            <Zap size={10} className="text-amber-500" />
+                            {node.slug ? `${node.slug}.academyos.com` : "—"}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Access Point */}
-                  <td className="px-6 py-6">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600">
-                        <Mail size={12} className="text-slate-400" />{" "}
-                        {node.email || "—"}
+                    <td className="px-6 py-6">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600">
+                          <Mail size={12} className="text-slate-400" />
+                          {node.email || "—"}
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600">
+                          <Phone size={12} className="text-slate-400" />
+                          {phone}
+                        </div>
                       </div>
+                    </td>
 
-                      {/* ✅ FIX: show phone from normalized `node.phone` */}
-                      <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600">
-                        <Phone size={12} className="text-slate-400" />{" "}
-                        {node.phone || "N/A"}
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* License */}
-                  <td className="px-6 py-6">
-                    <div className="flex flex-col gap-1.5">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase border ${
-                          node.subscriptionStatus === "paid"
-                            ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                            : "bg-indigo-50 text-indigo-600 border-indigo-100"
-                        }`}
-                      >
-                        {node.subscriptionStatus || "trial"}
-                      </span>
-
-                      {!node.paymentProcessed && (
-                        <span className="text-[9px] font-bold text-rose-500 flex items-center gap-1 animate-pulse">
-                          <AlertCircle size={10} /> Billing Warning
-                        </span>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Trial Health */}
-                  <td className="px-6 py-6">
-                    <div className="w-32 space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black uppercase">
-                        <span className="text-slate-400">Days</span>
+                    <td className="px-6 py-6">
+                      <div className="flex flex-col gap-1.5">
                         <span
-                          className={
-                            trial.remaining <= 3
-                              ? "text-rose-500"
-                              : "text-slate-600"
-                          }
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase border ${
+                            node.subscriptionStatus === "paid"
+                              ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                              : "bg-indigo-50 text-indigo-600 border-indigo-100"
+                          }`}
                         >
-                          {trial.remaining}d
+                          {node.subscriptionStatus || "trial"}
                         </span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full transition-all duration-1000 ${trial.color}`}
-                          style={{ width: `${trial.percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  </td>
 
-                  {/* Command */}
-                  <td className="px-8 py-6 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => handleOpenModal(node)}
-                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                      >
-                        <Settings2 size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(node._id, node)}
-                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+                        {!node.paymentProcessed && (
+                          <span className="text-[9px] font-bold text-rose-500 flex items-center gap-1 animate-pulse">
+                            <AlertCircle size={10} /> Billing Warning
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-6">
+                      <div className="w-32 space-y-1.5">
+                        <div className="flex justify-between text-[10px] font-black uppercase">
+                          <span className="text-slate-400">Days</span>
+                          <span
+                            className={
+                              trial.remaining <= 3
+                                ? "text-rose-500"
+                                : "text-slate-600"
+                            }
+                          >
+                            {trial.remaining}d
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-1000 ${trial.color}`}
+                            style={{ width: `${trial.percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-8 py-6 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => handleOpenModal(node)}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                        >
+                          <Settings2 size={18} />
+                        </button>
+
+                        <button
+                          onClick={() => handleDelete(node)}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {filteredNodes.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-8 py-12 text-slate-500 font-semibold"
+                  >
+                    No centers found.
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
-
-      {/* Modal */}
+      {/* Modal (same as your current, kept) */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -398,21 +456,19 @@ const CentersManagement = () => {
                 }
               />
             </div>
-          </div>
 
-          {/* ✅ Phone input added */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-              Contact Number
-            </label>
-            <input
-              className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-800 focus:ring-4 ring-indigo-500/10 outline-none"
-              value={formData.phone}
-              onChange={(e) =>
-                setFormData({ ...formData, phone: e.target.value })
-              }
-              placeholder="e.g. 017xxxxxxxx"
-            />
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Contact Number
+              </label>
+              <input
+                className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-800 focus:ring-4 ring-indigo-500/10 outline-none"
+                value={formData.phone}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
+              />
+            </div>
           </div>
 
           <div className="p-6 bg-indigo-600 rounded-3xl text-white space-y-4 shadow-xl">
@@ -452,6 +508,7 @@ const CentersManagement = () => {
               <span className="text-[10px] font-black uppercase tracking-widest">
                 Manual Billing Bypass
               </span>
+
               <button
                 type="button"
                 onClick={() =>
