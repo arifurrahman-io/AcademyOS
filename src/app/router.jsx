@@ -23,50 +23,16 @@ import CentersManagement from "../dashboard/CentersManagement";
 import Unauthorized from "../pages/Unauthorized";
 import NotFound from "../pages/NotFound";
 import SuperAdminPaymentsManagement from "../dashboard/SuperAdminPaymentsManagement";
-
-/**
- * Smart default redirect:
- * - If logged in, send to their proper dashboard
- * - If not logged in, send to login
- *
- * (This is optional; if you don’t want this, keep simple Navigate.)
- */
-const RootRedirect = () => {
-  // You can optionally use store here, but keep it simple for now:
-  return <Navigate to="/dashboard" replace />;
-};
+import HomePage from "../pages/HomePage";
 
 export const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <RootRedirect />,
-  },
+  // 🌐 Public
+  { path: "/", element: <HomePage /> },
+  { path: "/login", element: <Login /> },
+  { path: "/register", element: <Register /> },
+  { path: "/unauthorized", element: <Unauthorized /> },
 
-  // Public
-  {
-    path: "/login",
-    element: <Login />,
-  },
-  {
-    path: "/register",
-    element: <Register />,
-  },
-  {
-    path: "/unauthorized",
-    element: <Unauthorized />,
-  },
-
-  // Upgrade (any logged-in user)
-  {
-    path: "/upgrade",
-    element: (
-      <ProtectedRoute>
-        <UpgradePlan />
-      </ProtectedRoute>
-    ),
-  },
-
-  // Super Admin
+  // 🛡 SUPER ADMIN
   {
     path: "/super-admin",
     element: (
@@ -75,31 +41,14 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      // ✅ Render overview on /super-admin
-      {
-        index: true,
-        element: <Navigate to="dashboard" replace />,
-      },
-      // ✅ Must render something; SuperAdminDashboard already shows overview based on pathname
-      // but we still provide a valid element to avoid "blank route" issues.
-      {
-        path: "dashboard",
-        element: <div />, // lightweight placeholder
-      },
-      {
-        path: "centers",
-        element: <CentersManagement />,
-      },
-      {
-        path: "payments",
-        element: <SuperAdminPaymentsManagement />,
-      },
-      // add future routes here:
-      // { path: "payments", element: <PaymentsPage /> },
+      { index: true, element: <Navigate to="dashboard" replace /> },
+      { path: "dashboard", element: <div /> },
+      { path: "centers", element: <CentersManagement /> },
+      { path: "payments", element: <SuperAdminPaymentsManagement /> },
     ],
   },
 
-  // Coaching Admin/Staff
+  // 🏫 COACHING DASHBOARD
   {
     path: "/dashboard",
     element: (
@@ -108,16 +57,14 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      {
-        index: true,
-        element: <Navigate to="students" replace />,
-      },
+      // ✅ DO NOT redirect from index
+      { index: true, element: <div /> },
 
       // Students
       { path: "students", element: <StudentList /> },
       { path: "students/new", element: <StudentForm /> },
       { path: "students/profile/:id", element: <StudentProfile /> },
-      { path: "students/edit/:id", element: <StudentForm isEdit={true} /> },
+      { path: "students/edit/:id", element: <StudentForm isEdit /> },
 
       // Payments
       { path: "payments/collect", element: <PaymentCollection /> },
@@ -133,12 +80,15 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+
+      // 💳 UPGRADE — dashboard এর ভেতরেই
+      {
+        path: "upgrade",
+        element: <UpgradePlan />,
+      },
     ],
   },
 
-  // Fallback
-  {
-    path: "*",
-    element: <NotFound />,
-  },
+  // ❌ 404
+  { path: "*", element: <NotFound /> },
 ]);

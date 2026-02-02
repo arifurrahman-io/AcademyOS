@@ -14,24 +14,42 @@ const api = axios.create({
  */
 const safeRedirect = (path) => {
   if (typeof window === "undefined") return;
-  if (window.location.pathname === path) return;
+  if (window.location.pathname + window.location.search === path) return;
   window.location.href = path;
 };
 
 const buildUpgradeUrl = () => {
+  if (typeof window === "undefined") return "/upgrade";
   const from = window.location.pathname + window.location.search;
   const params = new URLSearchParams({ from });
   return `/upgrade?${params.toString()}`;
 };
 
+const getReqMeta = (error) => {
+  const url = error?.config?.url || "";
+  const method = String(error?.config?.method || "get").toLowerCase();
+  return { url, method };
+};
+
 /**
- * Decide whether we should redirect for a given failing request.
+ * Endpoints that must NOT cause redirect loops.
+ * We allow these to fail and let UI/ProtectedRoute handle.
+ */
+const isNoRedirectEndpoint = (url = "") => {
+  return (
+    url.includes("/subscriptions/my-status") ||
+    url.includes("/subscriptions/upgrade-center") ||
+    url.includes("/auth/login") ||
+    url.includes("/auth/register")
+  );
+};
+
+/**
  * We should NOT redirect for background calls (settings save, list fetch),
- * only redirect for "page entry" calls if you want.
+ * only redirect for safe "view" calls if needed.
  */
 const shouldRedirectOn403 = (error) => {
-  const url = error?.config?.url || "";
-  const method = (error?.config?.method || "").toLowerCase();
+  const { url, method } = getReqMeta(error);
 
   // Do NOT redirect for write operations (PUT/POST/PATCH/DELETE).
   if (["post", "put", "patch", "delete"].includes(method)) return false;
@@ -39,7 +57,29 @@ const shouldRedirectOn403 = (error) => {
   // Do NOT redirect for tenant settings endpoints (they are in-page actions).
   if (url.includes("/coaching/settings")) return false;
 
-  // Otherwise OK to redirect for forbidden view pages (optional)
+  return true;
+};
+
+/**
+ * SUBSCRIPTION redirect policy:
+ * - Only redirect on GET requests (page/view loads)
+ * - Do NOT redirect for my-status/auth/upgrade submit endpoints
+ * - Do NOT redirect if already on /upgrade
+ */
+const shouldRedirectOn402 = (error) => {
+  const { url, method } = getReqMeta(error);
+
+  if (isNoRedirectEndpoint(url)) return false;
+  if (["post", "put", "patch", "delete"].includes(method)) return false;
+
+  // already on upgrade -> never redirect again
+  if (
+    typeof window !== "undefined" &&
+    window.location.pathname.startsWith("/upgrade")
+  ) {
+    return false;
+  }
+
   return true;
 };
 
@@ -64,17 +104,17 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const status = error?.response?.status;
-    const data = error?.response?.data;
-    const code = data?.code;
-
     // ✅ Network / server down
-    if (!error.response) {
+    if (!error?.response) {
       return Promise.reject({
         ...error,
         message: "Network error. Please check your internet or server.",
       });
     }
+
+    const status = error.response.status;
+    const data = error.response.data;
+    const code = data?.code;
 
     /**
      * ✅ SUBSCRIPTION LOCK
@@ -83,9 +123,9 @@ api.interceptors.response.use(
      *  - data: { success:false, code:"SUBSCRIPTION_REQUIRED" }
      */
     if (status === 402 && code === "SUBSCRIPTION_REQUIRED") {
-      const upgradeUrl = buildUpgradeUrl();
-      if (!window.location.pathname.startsWith("/upgrade")) {
-        safeRedirect(upgradeUrl);
+      // IMPORTANT: do not redirect for background calls
+      if (shouldRedirectOn402(error)) {
+        safeRedirect(buildUpgradeUrl());
       }
       return Promise.reject(error);
     }
@@ -96,19 +136,24 @@ api.interceptors.response.use(
     if (status === 401) {
       const { logout } = useAuthStore.getState();
       logout();
-      if (window.location.pathname !== "/login") safeRedirect("/login");
+      if (
+        typeof window !== "undefined" &&
+        window.location.pathname !== "/login"
+      ) {
+        safeRedirect("/login");
+      }
       return Promise.reject(error);
     }
 
     /**
      * ✅ FORBIDDEN (role mismatch / access denied)
-     * IMPORTANT: Do NOT always redirect.
-     * For in-page operations (PUT/POST etc), just return the error to UI.
      */
     if (status === 403) {
-      // Only redirect when appropriate
       if (shouldRedirectOn403(error)) {
-        if (window.location.pathname !== "/unauthorized") {
+        if (
+          typeof window !== "undefined" &&
+          window.location.pathname !== "/unauthorized"
+        ) {
           safeRedirect("/unauthorized");
         }
       }

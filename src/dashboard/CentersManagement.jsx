@@ -12,6 +12,8 @@ import {
   AlertCircle,
   ExternalLink,
   Zap,
+  BadgeCheck,
+  Ban,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Button from "../components/Button";
@@ -21,13 +23,63 @@ import api from "../services/api";
 const getId = (node) => node?._id || node?.id || node?.centerId || null;
 
 const normalizeCenters = (payload) => {
-  // payload can be: [] OR {success,data:[...]} OR {success,data:{items:[...]}}
   if (!payload) return [];
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload.data)) return payload.data;
   if (Array.isArray(payload.items)) return payload.items;
   if (payload.data) return normalizeCenters(payload.data);
   return [];
+};
+
+const formatDate = (d) => {
+  if (!d) return "—";
+  const date = new Date(d);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+};
+
+const toInputDate = (d) => {
+  if (!d) return "";
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return "";
+  const yyyy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const addDays = (date, days) => {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+};
+
+const isPaidNode = (node) => {
+  if (node?.subscriptionStatus === "paid") return true; // legacy
+  if (node?.subscriptionStatus === "active") return true; // legacy alt
+  if (node?.subscription?.status === "active") return true; // new engine
+  return false;
+};
+
+const getSubDates = (node) => {
+  const start =
+    node?.subscription?.startAt ||
+    node?.subscriptionStartDate ||
+    node?.paidAt ||
+    null;
+
+  const end =
+    node?.subscription?.endAt ||
+    node?.subscriptionEndDate ||
+    node?.expiryDate ||
+    node?.endAt ||
+    null;
+
+  return { start, end };
 };
 
 const CentersManagement = () => {
@@ -43,28 +95,39 @@ const CentersManagement = () => {
   const [selectedCenter, setSelectedCenter] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
+  /**
+   * ✅ FULL CONTROL FORM:
+   * - legacy subscriptionStatus
+   * - new engine subscription.status + dates
+   * - paymentProcessed
+   */
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
     adminEmail: "",
     adminPassword: "",
-    subscriptionStatus: "trial",
-    paymentProcessed: true,
     phone: "",
+
+    // legacy flags (your UI uses these too)
+    subscriptionStatus: "trial", // trial | paid | suspended | expired
+    paymentProcessed: true,
+
+    // new engine fields
+    subStatus: "trial_active", // trial_active | trial_expired | payment_pending | active | expired | suspended
+    startAt: "",
+    endAt: "",
   });
 
-  // ✅ fallback fetch if outlet stats are empty/undefined
   const bootstrap = async () => {
     setBootLoading(true);
 
-    // hard timeout so UI never hangs
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 8000);
 
     try {
       const res = await api.get("/coaching/all", {
         signal: controller.signal,
-        timeout: 8000, // axios timeout as well
+        timeout: 8000,
       });
 
       const arr = normalizeCenters(res.data);
@@ -89,12 +152,10 @@ const CentersManagement = () => {
 
   useEffect(() => {
     const arr = normalizeCenters(stats);
-    // if layout passed centers -> use it
     if (arr.length > 0) {
       setLocalCenters(arr);
       return;
     }
-    // otherwise fallback fetch
     bootstrap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stats]);
@@ -124,15 +185,23 @@ const CentersManagement = () => {
 
   const handleOpenModal = (center = null) => {
     if (center) {
+      const phone = center.phone || center.settings?.contactNumber || "";
+      const { start, end } = getSubDates(center);
+
       setSelectedCenter(center);
       setFormData({
         name: center.name || "",
         slug: center.slug || "",
         adminEmail: center.email || center.adminEmail || "",
+        adminPassword: "",
+        phone,
+
         subscriptionStatus: center.subscriptionStatus || "trial",
         paymentProcessed: center.paymentProcessed ?? true,
-        adminPassword: "",
-        phone: center.phone || center.settings?.contactNumber || "",
+
+        subStatus: center?.subscription?.status || "trial_active",
+        startAt: toInputDate(start),
+        endAt: toInputDate(end),
       });
     } else {
       setSelectedCenter(null);
@@ -141,43 +210,17 @@ const CentersManagement = () => {
         slug: "",
         adminEmail: "",
         adminPassword: "",
+        phone: "",
+
         subscriptionStatus: "trial",
         paymentProcessed: true,
-        phone: "",
+
+        subStatus: "trial_active",
+        startAt: "",
+        endAt: "",
       });
     }
     setIsModalOpen(true);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const payload = {
-      name: formData.name,
-      slug: formData.slug,
-      adminEmail: formData.adminEmail,
-      adminPassword: formData.adminPassword,
-      subscriptionStatus: formData.subscriptionStatus,
-      paymentProcessed: formData.paymentProcessed,
-      phone: formData.phone,
-    };
-
-    try {
-      if (selectedCenter?._id) {
-        await api.put(`/coaching/${selectedCenter._id}`, payload);
-        toast.success("Center updated");
-      } else {
-        await api.post("/coaching/register", payload);
-        toast.success("Center created");
-      }
-      setIsModalOpen(false);
-      await safeRefresh();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Save failed");
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleDelete = async (node) => {
@@ -210,6 +253,88 @@ const CentersManagement = () => {
     if (percent < 30) color = "bg-rose-500";
     else if (percent < 60) color = "bg-amber-500";
     return { percent, color, remaining: Math.max(0, remaining) };
+  };
+
+  /**
+   * ✅ quick actions in modal
+   */
+  const activateOneYear = () => {
+    const start = new Date();
+    const end = addDays(start, 365);
+
+    setFormData((s) => ({
+      ...s,
+      subscriptionStatus: "paid", // legacy
+      paymentProcessed: true,
+      subStatus: "active", // new engine
+      startAt: toInputDate(start),
+      endAt: toInputDate(end),
+    }));
+  };
+
+  const markPendingPayment = () => {
+    setFormData((s) => ({
+      ...s,
+      paymentProcessed: false,
+      subStatus: "payment_pending",
+      subscriptionStatus: "trial",
+      startAt: "",
+      endAt: "",
+    }));
+  };
+
+  const expireSubscription = () => {
+    setFormData((s) => ({
+      ...s,
+      subscriptionStatus: "expired",
+      subStatus: "expired",
+      paymentProcessed: true,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    // Convert input date -> Date (or null)
+    const startAtISO = formData.startAt ? new Date(formData.startAt) : null;
+    const endAtISO = formData.endAt ? new Date(formData.endAt) : null;
+
+    const payload = {
+      name: formData.name,
+      slug: formData.slug,
+      adminEmail: formData.adminEmail,
+      adminPassword: formData.adminPassword,
+      phone: formData.phone,
+
+      // legacy
+      subscriptionStatus: formData.subscriptionStatus,
+      paymentProcessed: formData.paymentProcessed,
+
+      // new engine
+      subscription: {
+        status: formData.subStatus,
+        startAt: startAtISO,
+        endAt: endAtISO,
+        plan: "yearly",
+      },
+    };
+
+    try {
+      if (selectedCenter?._id) {
+        await api.put(`/coaching/${selectedCenter._id}`, payload);
+        toast.success("Center updated");
+      } else {
+        await api.post("/coaching/register", payload);
+        toast.success("Center created");
+      }
+      setIsModalOpen(false);
+      await safeRefresh();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Save failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -253,6 +378,7 @@ const CentersManagement = () => {
           </button>
         </div>
       </div>
+
       {/* Body */}
       <div className="bg-white rounded-[2rem] border border-slate-200/60 overflow-hidden shadow-sm overflow-x-auto">
         {bootLoading ? (
@@ -279,7 +405,7 @@ const CentersManagement = () => {
                   License
                 </th>
                 <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                  Trial Health
+                  Trial / Subscription
                 </th>
                 <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest">
                   Command
@@ -290,15 +416,19 @@ const CentersManagement = () => {
             <tbody className="divide-y divide-slate-50">
               {filteredNodes.map((node, index) => {
                 const id = getId(node);
-                const trial = getTrialStatus(node.trialExpiryDate);
                 const phone =
                   node.phone || node.settings?.contactNumber || "N/A";
+                const paid = isPaidNode(node);
+
+                const { start, end } = getSubDates(node);
+                const trial = getTrialStatus(node.trialExpiryDate);
 
                 return (
                   <tr
                     key={id || `node-${index}`}
                     className="hover:bg-slate-50/80 transition-colors group"
                   >
+                    {/* Instance */}
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-bold shadow-md">
@@ -328,6 +458,7 @@ const CentersManagement = () => {
                       </div>
                     </td>
 
+                    {/* Access */}
                     <td className="px-6 py-6">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600">
@@ -341,16 +472,17 @@ const CentersManagement = () => {
                       </div>
                     </td>
 
+                    {/* License */}
                     <td className="px-6 py-6">
                       <div className="flex flex-col gap-1.5">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase border ${
-                            node.subscriptionStatus === "paid"
+                            paid
                               ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                               : "bg-indigo-50 text-indigo-600 border-indigo-100"
                           }`}
                         >
-                          {node.subscriptionStatus || "trial"}
+                          {node.subscriptionStatus || (paid ? "paid" : "trial")}
                         </span>
 
                         {!node.paymentProcessed && (
@@ -361,29 +493,56 @@ const CentersManagement = () => {
                       </div>
                     </td>
 
+                    {/* Trial / Subscription */}
                     <td className="px-6 py-6">
-                      <div className="w-32 space-y-1.5">
-                        <div className="flex justify-between text-[10px] font-black uppercase">
-                          <span className="text-slate-400">Days</span>
-                          <span
-                            className={
-                              trial.remaining <= 3
-                                ? "text-rose-500"
-                                : "text-slate-600"
-                            }
-                          >
-                            {trial.remaining}d
-                          </span>
+                      {paid ? (
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-black uppercase text-slate-400">
+                            Subscription
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <div className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                              <span className="text-slate-400 font-black uppercase text-[10px]">
+                                Start
+                              </span>
+                              <span>{formatDate(start)}</span>
+                            </div>
+
+                            <div className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                              <span className="text-slate-400 font-black uppercase text-[10px]">
+                                End
+                              </span>
+                              <span>{formatDate(end)}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-1000 ${trial.color}`}
-                            style={{ width: `${trial.percent}%` }}
-                          />
+                      ) : (
+                        <div className="w-32 space-y-1.5">
+                          <div className="flex justify-between text-[10px] font-black uppercase">
+                            <span className="text-slate-400">Days</span>
+                            <span
+                              className={
+                                trial.remaining <= 3
+                                  ? "text-rose-500"
+                                  : "text-slate-600"
+                              }
+                            >
+                              {trial.remaining}d
+                            </span>
+                          </div>
+
+                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-1000 ${trial.color}`}
+                              style={{ width: `${trial.percent}%` }}
+                            />
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </td>
 
+                    {/* Actions */}
                     <td className="px-8 py-6 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
@@ -419,15 +578,15 @@ const CentersManagement = () => {
           </table>
         )}
       </div>
-      {/* Modal (same as your current, kept) */}
+
+      {/* Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={
-          selectedCenter ? "Infrastructure Update" : "Cluster Provisioning"
-        }
+        title={selectedCenter ? "Node Control Panel" : "Cluster Provisioning"}
       >
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+          {/* Base Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
@@ -471,63 +630,161 @@ const CentersManagement = () => {
             </div>
           </div>
 
-          <div className="p-6 bg-indigo-600 rounded-3xl text-white space-y-4 shadow-xl">
-            <div className="flex items-center justify-between">
+          {/* Subscription / Payment Control */}
+          <div className="p-6 rounded-3xl border border-slate-200 bg-white space-y-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
-                <h3 className="text-base font-bold flex items-center gap-2">
-                  <Calendar size={18} /> License Management
+                <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <Calendar size={16} /> Billing Controls
                 </h3>
-                <p className="text-indigo-100 text-[10px] mt-0.5 font-medium">
-                  Assign access tier and override billing status
+                <p className="text-slate-500 text-[11px] font-bold mt-1">
+                  Manage subscription state + payment processing from here.
                 </p>
               </div>
 
-              <select
-                className="bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 text-xs font-bold uppercase outline-none"
-                value={formData.subscriptionStatus}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    subscriptionStatus: e.target.value,
-                  })
-                }
-              >
-                <option value="trial" className="text-slate-900">
-                  Standard Trial
-                </option>
-                <option value="paid" className="text-slate-900">
-                  Enterprise
-                </option>
-                <option value="suspended" className="text-slate-900">
-                  Suspended
-                </option>
-              </select>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={activateOneYear}
+                  className="px-4 py-2 rounded-2xl bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-emerald-500 transition-all flex items-center gap-2"
+                >
+                  <BadgeCheck size={16} /> Activate 1 Year
+                </button>
+
+                <button
+                  type="button"
+                  onClick={markPendingPayment}
+                  className="px-4 py-2 rounded-2xl bg-amber-500 text-white text-[11px] font-black uppercase tracking-widest hover:bg-amber-400 transition-all"
+                >
+                  Mark Pending
+                </button>
+
+                <button
+                  type="button"
+                  onClick={expireSubscription}
+                  className="px-4 py-2 rounded-2xl bg-rose-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-rose-500 transition-all flex items-center gap-2"
+                >
+                  <Ban size={16} /> Expire
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-black/10 rounded-2xl border border-white/5">
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                Manual Billing Bypass
-              </span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Legacy status */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  Legacy Subscription Status
+                </label>
+                <select
+                  className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 font-black text-[11px] uppercase outline-none"
+                  value={formData.subscriptionStatus}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      subscriptionStatus: e.target.value,
+                    })
+                  }
+                >
+                  <option value="trial">trial</option>
+                  <option value="paid">paid</option>
+                  <option value="active">active</option>
+                  <option value="expired">expired</option>
+                  <option value="suspended">suspended</option>
+                  <option value="deactivated">deactivated</option>
+                </select>
+              </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    paymentProcessed: !formData.paymentProcessed,
-                  })
-                }
-                className={`px-5 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all ${
-                  formData.paymentProcessed
-                    ? "bg-white text-indigo-600"
-                    : "bg-rose-500 text-white animate-pulse"
-                }`}
-              >
-                {formData.paymentProcessed ? "Verified ✓" : "Pending Action"}
-              </button>
+              {/* New engine status */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  Subscription Engine Status
+                </label>
+                <select
+                  className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 font-black text-[11px] uppercase outline-none"
+                  value={formData.subStatus}
+                  onChange={(e) =>
+                    setFormData({ ...formData, subStatus: e.target.value })
+                  }
+                >
+                  <option value="trial_active">trial_active</option>
+                  <option value="trial_expired">trial_expired</option>
+                  <option value="payment_pending">payment_pending</option>
+                  <option value="active">active</option>
+                  <option value="expired">expired</option>
+                  <option value="suspended">suspended</option>
+                </select>
+              </div>
+
+              {/* Payment processed */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  Payment Processed
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((s) => ({
+                      ...s,
+                      paymentProcessed: !s.paymentProcessed,
+                    }))
+                  }
+                  className={`w-full px-4 py-3 rounded-2xl border font-black text-[11px] uppercase tracking-widest transition-all
+                    ${
+                      formData.paymentProcessed
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                        : "bg-rose-50 text-rose-700 border-rose-100 animate-pulse"
+                    }`}
+                >
+                  {formData.paymentProcessed ? "Processed ✓" : "Pending ⚠️"}
+                </button>
+              </div>
+
+              {/* Dates */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  Subscription Start
+                </label>
+                <input
+                  type="date"
+                  value={formData.startAt}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startAt: e.target.value })
+                  }
+                  className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 font-bold outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  Subscription End
+                </label>
+                <input
+                  type="date"
+                  value={formData.endAt}
+                  onChange={(e) =>
+                    setFormData({ ...formData, endAt: e.target.value })
+                  }
+                  className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 font-bold outline-none"
+                />
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Preview
+                </p>
+                <p className="text-sm font-black text-slate-900 mt-1">
+                  {formatDate(formData.startAt)} → {formatDate(formData.endAt)}
+                </p>
+                <p className="text-[11px] font-bold text-slate-500 mt-1">
+                  Engine:{" "}
+                  <span className="text-slate-900">{formData.subStatus}</span>
+                </p>
+              </div>
             </div>
           </div>
 
+          {/* Admin credentials */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
@@ -567,9 +824,7 @@ const CentersManagement = () => {
             isLoading={loading}
             className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-[11px] hover:bg-indigo-600 transition-all"
           >
-            {selectedCenter
-              ? "Apply Architecture Changes"
-              : "Establish Deployment Node"}
+            {selectedCenter ? "Save Changes" : "Create Center"}
           </Button>
         </form>
       </Modal>

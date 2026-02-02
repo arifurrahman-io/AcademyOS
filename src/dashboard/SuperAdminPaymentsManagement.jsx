@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   Search,
   RefreshCw,
@@ -7,6 +7,8 @@ import {
   Clock3,
   ShieldCheck,
   BadgeCheck,
+  Ban,
+  MessageSquareText,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -20,20 +22,61 @@ const TABS = [
 ];
 
 const normalizeList = (payload) => {
-  // Supports:
-  // 1) { items: [], meta:{} }
-  // 2) []
-  // 3) { data: { items: [] } } (extra nesting)
   if (!payload) return { items: [], meta: null };
-
   if (Array.isArray(payload)) return { items: payload, meta: null };
-
   if (Array.isArray(payload.items))
     return { items: payload.items, meta: payload.meta || null };
-
   if (payload.data) return normalizeList(payload.data);
-
   return { items: [], meta: null };
+};
+
+// Helpers
+const getMethod = (p) => p?.provider || p?.method || "";
+const methodLabel = (p) => {
+  const m = getMethod(p);
+  if (!m) return "N/A";
+  const v = String(m).trim().toLowerCase();
+  if (v === "bkash") return "bKash";
+  if (v === "nagad") return "Nagad";
+  return v.toUpperCase();
+};
+
+const getTrx = (p) => p?.trxId || p?.transactionId || "";
+const fmtDateTime = (d) => {
+  if (!d) return "—";
+  try {
+    return new Date(d).toLocaleString();
+  } catch {
+    return "—";
+  }
+};
+
+const badgeClass = (status) => {
+  const s = String(status || "").toLowerCase();
+  const map = {
+    pending: "bg-amber-50 text-amber-700 border-amber-100",
+    verified: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    rejected: "bg-rose-50 text-rose-700 border-rose-100",
+  };
+  return map[s] || "bg-slate-50 text-slate-600 border-slate-200";
+};
+
+const actionPill = (action) => {
+  if (action === "verify")
+    return {
+      title: "Verify Payment",
+      cta: "Approve & Activate 1 Year",
+      ctaClass: "bg-emerald-600 hover:bg-emerald-500",
+      hint: "Approving will activate yearly access for 365 days from verification time.",
+      icon: <BadgeCheck size={16} className="text-emerald-600" />,
+    };
+  return {
+    title: "Reject Payment",
+    cta: "Reject Payment",
+    ctaClass: "bg-rose-600 hover:bg-rose-500",
+    hint: "Rejecting will mark this payment as rejected. If center already has an active subscription, it will remain active.",
+    icon: <Ban size={16} className="text-rose-600" />,
+  };
 };
 
 const SuperAdminPaymentsManagement = () => {
@@ -42,98 +85,109 @@ const SuperAdminPaymentsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const [items, setItems] = useState([]); // ALWAYS ARRAY ✅
+  const [items, setItems] = useState([]);
   const [meta, setMeta] = useState(null);
 
-  // verify modal
+  // modal state
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(null);
-  const [verifying, setVerifying] = useState(false);
+  const [action, setAction] = useState("verify"); // verify | reject
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const fetchPayments = async (showToast = false) => {
-    if (showToast) setRefreshing(true);
-    setLoading(true);
+  const fetchPayments = useCallback(
+    async (showToast = false) => {
+      try {
+        if (showToast) setRefreshing(true);
+        setLoading(true);
 
-    try {
-      const res = await api.get("/subscriptions/payments", {
-        params: { status: tab, q },
-      });
+        const res = await api.get("/subscriptions/payments", {
+          params: { status: tab, q },
+        });
 
-      // Backend returns: { success:true, data:{ items, meta } }
-      const normalized = normalizeList(res.data?.data);
-      setItems(normalized.items);
-      setMeta(normalized.meta);
+        const normalized = normalizeList(res.data?.data);
+        setItems(normalized.items || []);
+        setMeta(normalized.meta || null);
 
-      if (showToast) toast.success("Payments synced");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to load payments");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+        if (showToast) toast.success("Payments synced");
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to load payments");
+        setItems([]);
+        setMeta(null);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [tab, q],
+  );
 
   useEffect(() => {
     fetchPayments(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
+  }, [tab, fetchPayments]);
 
   const filtered = useMemo(() => {
-    // items is always array ✅
-    if (!q.trim()) return items;
-
     const s = q.trim().toLowerCase();
+    if (!s) return items;
 
     return items.filter((p) => {
       const centerName = p.coaching_id?.name || "";
       const slug = p.coaching_id?.slug || "";
-      const trx = p.trxId || p.transactionId || "";
+      const trx = getTrx(p);
       const sender = p.senderNumber || "";
-      const method = p.method || "";
+      const method = getMethod(p);
 
       return (
         centerName.toLowerCase().includes(s) ||
         slug.toLowerCase().includes(s) ||
-        trx.toLowerCase().includes(s) ||
-        sender.toLowerCase().includes(s) ||
-        method.toLowerCase().includes(s)
+        String(trx).toLowerCase().includes(s) ||
+        String(sender).toLowerCase().includes(s) ||
+        String(method).toLowerCase().includes(s)
       );
     });
   }, [items, q]);
 
-  const openVerify = (payment) => {
+  const openActionModal = (payment, nextAction) => {
     setSelected(payment);
+    setAction(nextAction);
+    setNote("");
     setOpen(true);
   };
 
-  const handleVerify = async () => {
+  const closeModal = () => {
+    setOpen(false);
+    setSelected(null);
+    setNote("");
+    setSubmitting(false);
+  };
+
+  const submitAction = async () => {
     if (!selected?._id) return toast.error("Payment ID missing");
-    setVerifying(true);
+
+    setSubmitting(true);
     try {
-      // your backend route: PUT /subscriptions/payments/:paymentId/verify
       await api.put(`/subscriptions/payments/${selected._id}/verify`, {
-        action: "verify", // optional, keep for future
+        action, // "verify" | "reject"
+        note: note?.trim() || "",
       });
 
-      toast.success("Payment verified. 1 year activated.");
-      setOpen(false);
-      setSelected(null);
+      toast.success(
+        action === "verify" ? "Payment verified." : "Payment rejected.",
+      );
+      closeModal();
       fetchPayments(false);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Verify failed");
+      toast.error(err.response?.data?.message || "Action failed");
     } finally {
-      setVerifying(false);
+      setSubmitting(false);
     }
   };
 
-  const badge = (status) => {
-    const map = {
-      pending: "bg-amber-50 text-amber-600 border-amber-100",
-      verified: "bg-emerald-50 text-emerald-600 border-emerald-100",
-      rejected: "bg-rose-50 text-rose-600 border-rose-100",
-    };
-    return map[status] || "bg-slate-50 text-slate-600 border-slate-200";
-  };
+  const statusForRow = (p) => String(p?.status || tab).toLowerCase();
+  const canVerify = (st) => st === "pending" || st === "rejected";
+  const canReject = (st) => st === "pending" || st === "verified";
+
+  const modalUI = actionPill(action);
 
   return (
     <div className="p-6 lg:p-10 space-y-6">
@@ -148,7 +202,7 @@ const SuperAdminPaymentsManagement = () => {
             Billing & Verification Console
           </h1>
           <p className="text-sm text-slate-500 font-medium mt-1">
-            Review bKash/Nagad payments, verify to activate 1-year access.
+            Review bKash/Nagad payments. Verify to activate yearly access.
           </p>
         </div>
 
@@ -162,7 +216,7 @@ const SuperAdminPaymentsManagement = () => {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && fetchPayments(true)}
-              placeholder="Search center, trx, sender..."
+              placeholder="Search center, trx, sender, method..."
               className="w-80 max-w-full pl-11 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 outline-none focus:bg-white focus:ring-4 focus:ring-blue-500/10 font-semibold text-sm"
             />
           </div>
@@ -218,7 +272,7 @@ const SuperAdminPaymentsManagement = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-[1100px] w-full text-left">
+            <table className="min-w-[1200px] w-full text-left">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
                   <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">
@@ -237,6 +291,9 @@ const SuperAdminPaymentsManagement = () => {
                     Amount
                   </th>
                   <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                    Submitted
+                  </th>
+                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">
                     Status
                   </th>
                   <th className="px-6 py-4 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest">
@@ -244,10 +301,11 @@ const SuperAdminPaymentsManagement = () => {
                   </th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-slate-50">
                 {filtered.map((p) => {
                   const center = p.coaching_id || {};
-                  const status = p.status || tab;
+                  const st = statusForRow(p);
 
                   return (
                     <tr key={p._id} className="hover:bg-slate-50/70">
@@ -261,52 +319,74 @@ const SuperAdminPaymentsManagement = () => {
                           </p>
                         </div>
                       </td>
+
                       <td className="px-6 py-5">
                         <span className="text-xs font-black text-slate-700">
-                          {p.method || "N/A"}
+                          {methodLabel(p)}
                         </span>
                       </td>
+
                       <td className="px-6 py-5">
                         <span className="text-xs font-bold text-slate-700">
                           {p.senderNumber || "N/A"}
                         </span>
                       </td>
+
                       <td className="px-6 py-5">
                         <span className="text-xs font-mono font-black text-slate-800">
-                          {p.trxId || p.transactionId || "N/A"}
+                          {getTrx(p) || "N/A"}
                         </span>
                       </td>
+
                       <td className="px-6 py-5">
                         <span className="text-xs font-black text-slate-900">
                           {p.amount ?? 1200} BDT
                         </span>
                       </td>
+
+                      <td className="px-6 py-5">
+                        <span className="text-xs font-bold text-slate-600">
+                          {fmtDateTime(p.createdAt)}
+                        </span>
+                      </td>
+
                       <td className="px-6 py-5">
                         <span
-                          className={`inline-flex items-center gap-2 px-3 py-1 rounded-xl border text-[10px] font-black uppercase ${badge(
-                            status,
+                          className={`inline-flex items-center gap-2 px-3 py-1 rounded-xl border text-[10px] font-black uppercase ${badgeClass(
+                            st,
                           )}`}
                         >
-                          {status}
-                          {status === "verified" ? (
-                            <BadgeCheck size={14} />
-                          ) : null}
+                          {st}
+                          {st === "verified" ? <BadgeCheck size={14} /> : null}
                         </span>
                       </td>
 
                       <td className="px-6 py-5 text-right">
-                        {status === "pending" ? (
-                          <button
-                            onClick={() => openVerify(p)}
-                            className="px-4 py-2 rounded-xl bg-slate-900 text-white font-black text-xs uppercase tracking-widest hover:bg-emerald-600 transition-all"
-                          >
-                            Verify
-                          </button>
-                        ) : (
-                          <span className="text-xs font-bold text-slate-400">
-                            —
-                          </span>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {canVerify(st) && (
+                            <button
+                              onClick={() => openActionModal(p, "verify")}
+                              className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-black text-xs uppercase tracking-widest hover:bg-emerald-500 transition-all"
+                            >
+                              Verify
+                            </button>
+                          )}
+
+                          {canReject(st) && (
+                            <button
+                              onClick={() => openActionModal(p, "reject")}
+                              className="px-4 py-2 rounded-xl bg-rose-600 text-white font-black text-xs uppercase tracking-widest hover:bg-rose-500 transition-all"
+                            >
+                              Reject
+                            </button>
+                          )}
+
+                          {!canVerify(st) && !canReject(st) && (
+                            <span className="text-xs font-bold text-slate-400">
+                              —
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -317,46 +397,71 @@ const SuperAdminPaymentsManagement = () => {
         )}
       </div>
 
-      {/* Verify Modal */}
-      <Modal
-        isOpen={open}
-        onClose={() => {
-          setOpen(false);
-          setSelected(null);
-        }}
-        title="Verify Payment"
-      >
+      {/* Action Modal */}
+      <Modal isOpen={open} onClose={closeModal} title={modalUI.title}>
         <div className="space-y-5">
           <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
-            <p className="text-sm font-black text-slate-900">
-              {selected?.coaching_id?.name || "Unknown Center"}
-            </p>
-            <p className="text-[11px] text-slate-500 font-bold mt-1">
-              Method: {selected?.method || "N/A"} • Sender:{" "}
-              {selected?.senderNumber || "N/A"}
-            </p>
-            <p className="text-[11px] text-slate-500 font-bold mt-1">
-              TrxID:{" "}
-              <span className="font-mono">
-                {selected?.trxId || selected?.transactionId || "N/A"}
-              </span>{" "}
-              • Amount: {selected?.amount ?? 1200} BDT
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-black text-slate-900">
+                  {selected?.coaching_id?.name || "Unknown Center"}
+                </p>
+                <p className="text-[11px] text-slate-500 font-bold mt-1">
+                  Method: {methodLabel(selected)} • Sender:{" "}
+                  {selected?.senderNumber || "N/A"}
+                </p>
+                <p className="text-[11px] text-slate-500 font-bold mt-1">
+                  TrxID:{" "}
+                  <span className="font-mono">{getTrx(selected) || "N/A"}</span>{" "}
+                  • Amount: {selected?.amount ?? 1200} BDT
+                </p>
+              </div>
+              <div className="shrink-0 p-2 rounded-xl bg-white border border-slate-200">
+                {modalUI.icon}
+              </div>
+            </div>
           </div>
 
-          <div className="flex gap-3">
-            <Button
-              onClick={handleVerify}
-              isLoading={verifying}
-              className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500"
+          {/* Optional note */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-2">
+              <MessageSquareText size={14} />
+              Note (optional)
+            </label>
+            <textarea
+              rows={3}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder={
+                action === "reject"
+                  ? "Reason for rejection (optional)"
+                  : "Verification note (optional)"
+              }
+              className="w-full px-4 py-3 rounded-2xl bg-white border border-slate-200 outline-none focus:ring-4 focus:ring-blue-500/10 text-sm font-semibold"
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              type="button"
+              onClick={closeModal}
+              className="w-full sm:w-1/3 py-4 rounded-2xl border border-slate-200 text-slate-500 font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all"
             >
-              Approve & Activate 1 Year
+              Cancel
+            </button>
+
+            <Button
+              type="button"
+              onClick={submitAction}
+              isLoading={submitting}
+              className={`w-full sm:w-2/3 py-4 rounded-2xl text-white ${modalUI.ctaClass}`}
+            >
+              {modalUI.cta}
             </Button>
           </div>
 
           <p className="text-[11px] text-slate-400 font-medium">
-            After approval, the coaching node will be active for 1 year from
-            verification date.
+            {modalUI.hint}
           </p>
         </div>
       </Modal>

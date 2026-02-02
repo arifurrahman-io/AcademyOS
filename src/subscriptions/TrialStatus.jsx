@@ -4,56 +4,68 @@ import { ShieldCheck, AlertTriangle, Crown, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 
 /**
- * @desc    Subscription Banner for Coaching Admins
- * Optimized to use backend-calculated expiry dates to prevent logic drift.
+ * @desc Subscription Banner for Coaching Admins
+ * Uses backend-calculated trialExpiryDate to avoid drift.
  */
 const TrialStatus = () => {
   const { user, isTrialExpired } = useAuthStore();
 
-  // Hide banner for Super Admins or fully provisioned active subscribers
+  // ✅ Hide banner for Super Admin
   const isSuperAdmin = user?.role === "super-admin";
-  const isActive =
-    user?.subscriptionStatus === "active" ||
-    user?.subscriptionStatus === "paid";
-
-  if (isSuperAdmin || isActive) {
-    return null;
-  }
 
   /**
-   * REVISED LOGIC:
-   * Instead of calculating based on a hardcoded 7 days, we use the
-   * trialExpiryDate provided by the backend during login.
+   * ✅ IMPORTANT:
+   * After verification, DB shows:
+   * - subscriptionStatus: "paid"
+   * - subscription.status: "active"
+   * So we must check BOTH.
    */
-  const calculateDaysRemaining = () => {
-    if (!user?.trialExpiryDate) return 0;
+  const isPaidOrActive =
+    user?.subscriptionStatus === "paid" ||
+    user?.subscriptionStatus === "active" || // backward compatibility
+    user?.subscription?.status === "active";
 
-    const expiry = new Date(user.trialExpiryDate);
+  if (isSuperAdmin || isPaidOrActive) return null;
+
+  const calculateDaysRemaining = () => {
+    // Your DB has trialExpiryDate (good)
+    const raw =
+      user?.trialExpiryDate ||
+      user?.trialExpiry ||
+      user?.trialEnd ||
+      user?.trialExpiryAt;
+
+    if (!raw) return 0;
+
+    const expiry = new Date(raw);
     const today = new Date();
 
-    const diffTime = expiry - today;
+    const diffTime = expiry.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     return Math.max(0, diffDays);
   };
 
   const daysRemaining = calculateDaysRemaining();
-  // Double-check expiration status based on real-time date and store state
-  const effectiveExpired = isTrialExpired || daysRemaining <= 0;
+
+  /**
+   * ✅ Effective expiration:
+   * Store flag OR real-time date check.
+   */
+  const effectiveExpired = Boolean(isTrialExpired) || daysRemaining <= 0;
 
   return (
     <div
       className={`
-      relative p-5 rounded-[2.5rem] text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl transition-all duration-700 animate-in fade-in slide-in-from-top-4
-      ${
-        effectiveExpired
-          ? "bg-gradient-to-r from-rose-600 to-red-700 shadow-rose-200/40"
-          : "bg-gradient-to-r from-blue-600 to-indigo-700 shadow-blue-200/40"
-      }
-    `}
+        relative p-5 rounded-[2.5rem] text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl transition-all duration-700 animate-in fade-in slide-in-from-top-4
+        ${
+          effectiveExpired
+            ? "bg-gradient-to-r from-rose-600 to-red-700 shadow-rose-200/40"
+            : "bg-gradient-to-r from-blue-600 to-indigo-700 shadow-blue-200/40"
+        }
+      `}
     >
       <div className="flex items-center gap-5 ml-2 md:ml-4">
-        {/* Glassmorphism Icon Container */}
         <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-xl border border-white/10 shrink-0">
           {effectiveExpired ? (
             <AlertTriangle size={24} />
@@ -90,7 +102,6 @@ const TrialStatus = () => {
         {effectiveExpired ? "Activate License" : "Upgrade Plan"}
       </Link>
 
-      {/* Background depth element */}
       <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/5 rounded-full blur-3xl pointer-events-none" />
     </div>
   );

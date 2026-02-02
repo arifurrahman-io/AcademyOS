@@ -22,6 +22,7 @@ import toast from "react-hot-toast";
 import Loader from "../components/Loader";
 import { useAuthStore } from "../store/authStore";
 import api from "../services/api";
+import { authService } from "../services/auth.service";
 
 const SuperAdminDashboard = () => {
   // ✅ Data sources
@@ -118,11 +119,9 @@ const SuperAdminDashboard = () => {
     refresh(false);
   }, [refresh]);
 
-  const handleLogout = useCallback(() => {
-    logout();
-    toast.success("Root session terminated");
-    navigate("/login", { replace: true });
-  }, [logout, navigate]);
+  const handleLogout = () => {
+    authService.logout({ to: "/" });
+  };
 
   const isOverview =
     location.pathname === "/super-admin" ||
