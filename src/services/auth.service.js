@@ -94,7 +94,7 @@ export const authService = {
    * @param {string} options.to - redirect path
    */
   logout: (options = {}) => {
-    const { redirect = true, to = "/login" } = options;
+    const { redirect = true, to = "/" } = options;
 
     // 1) Clear localStorage keys (all variants)
     removeKeys(STORAGE_KEYS.token);

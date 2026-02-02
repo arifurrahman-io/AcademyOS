@@ -6,237 +6,257 @@ import {
   Layers,
   Users,
   CreditCard,
-  BarChart3,
   Sparkles,
-  CheckCircle2,
   Zap,
   Globe,
   Lock,
+  ChevronRight,
+  LayoutDashboard,
+  Database,
+  FileBarChart,
+  Server,
+  Fingerprint,
+  PhoneCall,
 } from "lucide-react";
+import { formatCurrency } from "../utils/format";
 
 export default function HomePage() {
-  const features = [
+  const coreFeatures = [
     {
-      icon: <Users className="h-5 w-5" />,
-      title: "Students & Admissions",
-      desc: "Add, search, and manage students with a clean workflow and fast access to profiles.",
-      color: "blue",
+      icon: <Users className="h-6 w-6" />,
+      title: "Student Lifecycle",
+      desc: "Comprehensive registry management from enrollment to alumni status with isolated data nodes.",
+      tag: "Registry",
     },
     {
-      icon: <CreditCard className="h-5 w-5" />,
-      title: "Fees & Payments",
-      desc: "Collect fees, track dues, generate defaulter lists, and keep a complete payment history.",
-      color: "emerald",
+      icon: <CreditCard className="h-6 w-6" />,
+      title: "Revenue Terminal",
+      desc: "Automated fee collection with TrxID verification for bKash, Nagad, and physical cash.",
+      tag: "Finance",
     },
     {
-      icon: <Layers className="h-5 w-5" />,
-      title: "Multi-Center Ready",
-      desc: "Manage multiple coaching centers from one platform with structured roles and access control.",
-      color: "indigo",
-    },
-    {
-      icon: <ShieldCheck className="h-5 w-5" />,
-      title: "Secure Role-Based Access",
-      desc: "Separate Super Admin and Coaching Admin/Teacher access with protected routes.",
-      color: "rose",
-    },
-    {
-      icon: <BarChart3 className="h-5 w-5" />,
-      title: "Operational Overview",
-      desc: "See key information quickly with dashboards designed for daily admin operations.",
-      color: "amber",
-    },
-    {
-      icon: <Sparkles className="h-5 w-5" />,
-      title: "Modern Experience",
-      desc: "Responsive UI, clean components, and scalable structure built for long-term growth.",
-      color: "sky",
+      icon: <FileBarChart className="h-6 w-6" />,
+      title: "Audit Exports",
+      desc: "Generate professional PDF reports for payments, student lists, and monthly defaulters.",
+      tag: "Reporting",
     },
   ];
 
+  const proFeatures = [
+    { icon: <Database size={18} />, text: "Isolated Tenant Database" },
+    { icon: <Fingerprint size={18} />, text: "Role-Based Access (RBAC)" },
+    { icon: <Server size={18} />, text: "99.9% Uptime SLA" },
+    { icon: <Lock size={18} />, text: "256-bit AES Encryption" },
+    { icon: <Zap size={18} />, text: "Instant Cloud Sync" },
+    { icon: <PhoneCall size={18} />, text: "Priority Support Node" },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#FDFDFF] selection:bg-indigo-100 selection:text-indigo-900">
-      {/* ADVANCED BACKGROUND DECORATIONS */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] h-[40%] w-[40%] rounded-full bg-gradient-to-br from-indigo-100/50 to-transparent blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-gradient-to-br from-blue-100/50 to-transparent blur-[120px]" />
+    <div className="relative min-h-screen bg-[#FAFBFF] text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden font-sans">
+      {/* 1. ANIMATED BACKGROUND INFRASTRUCTURE */}
+      <div className="fixed inset-0 -z-20 overflow-hidden pointer-events-none">
+        <div className="absolute top-[10%] left-[5%] w-64 h-64 bg-white/40 backdrop-blur-3xl rounded-[3rem] border border-white/50 shadow-2xl animate-float-slow rotate-12" />
+        <div className="absolute top-[60%] right-[-5%] w-80 h-80 bg-indigo-500/5 backdrop-blur-2xl rounded-[4rem] border border-indigo-200/20 shadow-2xl animate-float-slower" />
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              "linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
       </div>
 
-      {/* HERO SECTION */}
-      <section className="relative px-6 pt-20 pb-16 sm:pt-32 sm:pb-24">
-        <div className="mx-auto max-w-7xl">
-          <div className="flex flex-col items-center text-center space-y-8">
-            {/* Animated Badge */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/80 px-4 py-1.5 text-xs font-bold text-indigo-600 shadow-sm backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-1000">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-              </span>
-              AcademyOS 2.0 — The Future of Coaching Management
+      {/* 2. NAVIGATION */}
+      <nav className="sticky top-0 z-50 px-6 py-4 backdrop-blur-xl bg-white/70 border-b border-slate-200/50">
+        <div className="mx-auto max-w-7xl flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="bg-slate-900 p-1.5 rounded-lg">
+              <Zap className="h-5 w-5 text-white" fill="white" />
             </div>
-
-            <h1 className="max-w-4xl text-4xl font-[900] tracking-tight text-slate-900 sm:text-6xl lg:text-7xl leading-[1.1]">
-              Manage your institute with{" "}
-              <span className="relative inline-block">
-                <span className="relative z-10 bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
-                  Superpowers.
-                </span>
-                <span className="absolute bottom-2 left-0 h-3 w-full bg-indigo-100 -z-10 rounded-full opacity-50"></span>
-              </span>
-            </h1>
-
-            <p className="max-w-2xl text-lg leading-relaxed text-slate-600 sm:text-xl font-medium">
-              Eliminate paperwork. Automate fees. Scale your coaching business
-              with a multi-tenant platform designed for maximum operational
-              efficiency.
-            </p>
-
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <Link
-                to="/register"
-                className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-slate-900 px-8 py-4 text-sm font-bold text-white transition-all hover:bg-slate-800 hover:ring-4 ring-slate-900/10 active:scale-95"
-              >
-                Launch Your Center
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-
-              <Link
-                to="/login"
-                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-8 py-4 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
-              >
-                Sign In
-              </Link>
-            </div>
-
-            {/* Platform Trust Badges */}
-            <div className="flex flex-wrap justify-center gap-6 pt-8 grayscale opacity-60">
-              <div className="flex items-center gap-2 font-black text-slate-400 uppercase tracking-widest text-[10px]">
-                <Zap size={14} /> Fast Response
-              </div>
-              <div className="flex items-center gap-2 font-black text-slate-400 uppercase tracking-widest text-[10px]">
-                <Lock size={14} /> End-to-End Secure
-              </div>
-              <div className="flex items-center gap-2 font-black text-slate-400 uppercase tracking-widest text-[10px]">
-                <Globe size={14} /> Multi-Tenant
-              </div>
-            </div>
+            <span className="text-xl font-[1000] tracking-tighter uppercase">
+              Academy<span className="text-indigo-600">OS</span>
+            </span>
+          </div>
+          <div className="hidden md:flex items-center gap-8 text-[10px] font-black uppercase tracking-widest text-slate-500">
+            <a
+              href="#features"
+              className="hover:text-indigo-600 transition-colors"
+            >
+              Features
+            </a>
+            <a
+              href="#pricing"
+              className="hover:text-indigo-600 transition-colors"
+            >
+              Pricing
+            </a>
+            <Link
+              to="/login"
+              className="px-5 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-indigo-600 transition-all shadow-lg"
+            >
+              Portal Access
+            </Link>
           </div>
         </div>
-      </section>
+      </nav>
 
-      {/* FEATURES GRID */}
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((f, idx) => (
+      {/* 3. HERO SECTION */}
+      <header className="px-6 pt-20 pb-24 md:pt-32 md:pb-40 text-center relative z-10">
+        <div className="mx-auto max-w-5xl space-y-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white px-4 py-2 text-[10px] font-black text-indigo-600 shadow-xl uppercase tracking-widest animate-in fade-in slide-in-from-bottom-2">
+            <span className="flex h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
+            System Status: 2026 Node Cluster Active
+          </div>
+          <h1 className="text-6xl md:text-8xl font-[950] tracking-tighter leading-[0.9] uppercase">
+            The Operating System for{" "}
+            <span className="bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent italic">
+              Academies.
+            </span>
+          </h1>
+          <p className="max-w-2xl mx-auto text-lg md:text-xl text-slate-500 font-medium leading-relaxed italic">
+            "Eliminate administrative friction. Secure your revenue. Orchestrate
+            your entire coaching institute through a single cloud-native node."
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4 pt-6">
+            <Link
+              to="/register"
+              className="px-10 py-5 rounded-2xl bg-slate-900 text-white font-black uppercase tracking-widest text-xs hover:bg-indigo-600 transition-all shadow-2xl active:scale-95"
+            >
+              Provision Node
+            </Link>
+            <Link
+              to="/login"
+              className="px-10 py-5 rounded-2xl border-2 border-slate-200 bg-white text-slate-900 font-black uppercase tracking-widest text-xs hover:border-slate-400 transition-all active:scale-95"
+            >
+              Admin Login
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* 4. FEATURES BENTO GRID */}
+      <section id="features" className="px-6 py-24 bg-white relative z-10">
+        <div className="mx-auto max-w-7xl space-y-16">
+          <div className="text-center space-y-4">
+            <h2 className="text-4xl font-[950] uppercase tracking-tighter">
+              Engineered for <span className="text-indigo-600">Growth</span>
+            </h2>
+            <p className="text-slate-400 font-medium">
+              Modular components designed to scale with your student volume.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {coreFeatures.map((f) => (
               <div
                 key={f.title}
-                className="group relative rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-sm transition-all hover:-translate-y-2 hover:shadow-xl hover:shadow-indigo-500/5"
+                className="p-8 rounded-[2.5rem] bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-all group"
               >
-                <div
-                  className={`mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-900 transition-colors group-hover:bg-indigo-600 group-hover:text-white`}
-                >
+                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-xl mb-8 group-hover:scale-110 transition-transform">
                   {f.icon}
                 </div>
-                <h3 className="text-xl font-black text-slate-900 mb-3">
+                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-400">
+                  {f.tag} Module
+                </span>
+                <h3 className="text-xl font-black uppercase mt-2 mb-4 tracking-tight">
                   {f.title}
                 </h3>
-                <p className="text-sm leading-relaxed text-slate-500 font-medium">
+                <p className="text-slate-500 text-sm leading-relaxed font-medium italic">
                   {f.desc}
                 </p>
-
-                {/* Visual indicator of complexity */}
-                <div className="mt-6 flex items-center gap-2">
-                  <div className="h-1 w-12 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full w-2/3 bg-indigo-500 rounded-full" />
-                  </div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                    Enterprise Logic
-                  </span>
-                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA SECTION - NEW GLASS DESIGN */}
-      <section className="px-6 pb-24">
-        <div className="mx-auto max-w-7xl">
-          <div className="relative overflow-hidden rounded-[3rem] bg-slate-900 p-8 sm:p-16">
-            {/* Background pattern */}
-            <div className="absolute inset-0 opacity-10 [mask-image:radial-gradient(ellipse_at_center,white,transparent)]">
-              <div className="grid grid-cols-12 h-full w-full">
-                {[...Array(144)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="border-[0.5px] border-white h-full w-full"
-                  />
-                ))}
+      {/* 5. PRICING & PRO FEATURES */}
+      <section id="pricing" className="px-6 py-24 relative z-10">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid lg:grid-cols-2 gap-12 items-center bg-slate-900 rounded-[4rem] overflow-hidden shadow-2xl">
+            {/* Left: Price Card */}
+            <div className="p-12 md:p-20 text-white space-y-8">
+              <div>
+                <h2 className="text-4xl font-black uppercase tracking-tighter">
+                  Yearly <span className="text-blue-400">Pro</span>
+                </h2>
+                <p className="text-slate-400 mt-2 font-medium">
+                  Full infrastructure access for 365 days.
+                </p>
               </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-7xl font-[1000] tracking-tighter text-blue-400">
+                  {formatCurrency(1200)}
+                </span>
+                <span className="text-slate-500 font-black uppercase text-xs tracking-widest">
+                  / Per Node
+                </span>
+              </div>
+              <Link
+                to="/register"
+                className="block w-full text-center py-5 rounded-2xl bg-white text-slate-900 font-black uppercase tracking-widest text-xs hover:bg-blue-400 transition-all shadow-xl"
+              >
+                Claim Instance
+              </Link>
+              <p className="text-[10px] text-center font-bold text-slate-500 uppercase tracking-widest">
+                Includes 7-Day unrestricted trial
+              </p>
             </div>
 
-            <div className="relative z-10 flex flex-col items-center text-center space-y-6">
-              <h2 className="text-3xl font-black text-white sm:text-5xl">
-                Ready to digitize your campus?
-              </h2>
-              <p className="max-w-xl text-slate-400 font-medium">
-                Join hundreds of educators using AcademyOS to simplify their
-                daily operations. No complex setups, just pure management.
-              </p>
-              <div className="flex flex-col gap-4 sm:flex-row pt-4">
-                <Link
-                  to="/register"
-                  className="rounded-2xl bg-white px-8 py-4 text-sm font-black text-slate-900 uppercase tracking-widest transition-transform hover:scale-105"
-                >
-                  Start Free Trial
-                </Link>
-                <Link
-                  to="/start"
-                  className="rounded-2xl bg-white/10 px-8 py-4 text-sm font-black text-white backdrop-blur-md uppercase tracking-widest transition-transform hover:bg-white/20"
-                >
-                  View Demo
-                </Link>
+            {/* Right: Pro Features List */}
+            <div className="p-12 md:p-20 bg-white/5 backdrop-blur-3xl border-l border-white/5 space-y-8">
+              <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em]">
+                System Capabilities
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {proFeatures.map((feat, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="text-blue-400">{feat.icon}</div>
+                    <span className="text-xs font-black text-slate-200 uppercase tracking-tight">
+                      {feat.text}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-8 border-t border-white/5">
+                <div className="flex items-center gap-4">
+                  <div className="flex -space-x-3">
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-800"
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Trusted by 500+ Local Institutes
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* REFINED FOOTER */}
-      <footer className="border-t border-slate-100 bg-white/50 py-12 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="flex flex-col items-center justify-between gap-8 sm:flex-row">
-            <div className="flex flex-col items-center sm:items-start space-y-2">
-              <h3 className="text-lg font-black tracking-tighter text-slate-900 uppercase">
-                Academy<span className="text-indigo-600">OS</span>
-              </h3>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">
-                Modern Node Orchestration
-              </p>
-            </div>
-
-            <div className="flex gap-8 text-xs font-bold uppercase tracking-widest text-slate-500">
-              <Link className="transition-colors hover:text-indigo-600" to="/">
-                Home
-              </Link>
-              <Link
-                className="transition-colors hover:text-indigo-600"
-                to="/login"
-              >
-                Portal
-              </Link>
-              <Link
-                className="transition-colors hover:text-indigo-600"
-                to="/register"
-              >
-                Provision
-              </Link>
-            </div>
-
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              © {new Date().getFullYear()} Enterprise v2.0
-            </div>
+      {/* 6. CTA & FOOTER */}
+      <footer className="px-6 py-20 bg-white border-t border-slate-100">
+        <div className="mx-auto max-w-7xl flex flex-col md:flex-row justify-between items-center gap-12">
+          <div className="text-center md:text-left space-y-2">
+            <h3 className="text-2xl font-[1000] tracking-tighter uppercase">
+              AcademyOS
+            </h3>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
+              Distributed Node Orchestration Unit
+            </p>
+          </div>
+          <div className="flex gap-10 text-[10px] font-black uppercase tracking-widest text-slate-500">
+            <Link to="/login" className="hover:text-indigo-600">
+              Login
+            </Link>
+            <Link to="/register" className="hover:text-indigo-600">
+              Register
+            </Link>
+            <span className="text-slate-300">© 2026 AcademyOS Global</span>
           </div>
         </div>
       </footer>
