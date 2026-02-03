@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/hind-siliguri": "^5.2.7",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/noto-sans-bengali": "^5.2.11",
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.4",
     "date-fns": "^4.1.0",

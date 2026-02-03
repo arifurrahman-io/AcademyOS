@@ -1,13 +1,52 @@
 <!doctype html>
-<html lang="en">
+<html lang="bn">
   <head>
+    <!-- =====================
+         BASIC META
+    ====================== -->
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AcademyOS</title>
+
+    <!-- =====================
+         FAVICON
+    ====================== -->
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
+    <!-- =====================
+         GOOGLE FONTS (OPTIMIZED)
+         Bangla + English
+    ====================== -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- 🔹 Bangla Primary: Hind Siliguri -->
+    <!-- 🔹 Bangla Fallback: Noto Sans Bengali -->
+    <!-- 🔹 English/UI: Inter -->
+    <link
+      href="https://fonts.googleapis.com/css2?
+      family=Hind+Siliguri:wght@300;400;500;600;700&
+      family=Noto+Sans+Bengali:wght@300;400;500;600;700&
+      family=Inter:wght@300;400;500;600;700;800;900&
+      display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- =====================
+         META (OPTIONAL BUT GOOD)
+    ====================== -->
+    <meta
+      name="description"
+      content="AcademyOS — A modern coaching management platform with Bangla & English support."
+    />
+    <meta name="theme-color" content="#4f46e5" />
   </head>
+
   <body>
+    <!-- React Root -->
     <div id="root"></div>
+
+    <!-- App Entry -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

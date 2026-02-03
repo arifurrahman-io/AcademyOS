@@ -18,51 +18,176 @@ import {
   ChevronRight,
   Sparkles,
   LayoutDashboard,
-  Activity,
   MessageSquare,
   ExternalLink,
   Plus,
   Minus,
-  ShieldCheck,
-  Globe,
 } from "lucide-react";
 import logo from "../assets/academyos-logo.png";
 import hero from "../assets/hero-new.png";
 
 export default function HomePage() {
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // ✅ Default Bangla
+  const [lang, setLang] = useState("bn"); // "bn" | "en"
+  const isBN = lang === "bn";
+
   const YEARLY_PRICE = 1200;
+
+  // ✅ set html class for font switching (your CSS uses html.lang-en)
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!root) return;
+
+    if (isBN) root.classList.remove("lang-en");
+    else root.classList.add("lang-en");
+
+    // optional: proper lang attribute for accessibility
+    root.setAttribute("lang", isBN ? "bn" : "en");
+  }, [isBN]);
+
+  const t = useMemo(
+    () => ({
+      nav: {
+        features: isBN ? "ফিচার" : "Features",
+        pricing: isBN ? "মূল্য" : "Pricing",
+        faq: isBN ? "প্রশ্নোত্তর" : "FAQ",
+        contact: isBN ? "যোগাযোগ" : "Contact",
+        portalAccess: isBN ? "পোর্টাল" : "Portal",
+      },
+
+      hero: {
+        badge: isBN
+          ? "নতুন নোড ইনফ্রাস্ট্রাকচার সক্রিয়"
+          : "New Node Infrastructure Active",
+        title1: isBN ? "কোচিং ম্যানেজমেন্ট" : "Coaching management",
+        title2: isBN ? "সহজ ও দ্রুত" : "easy & fast",
+        title3: isBN ? "AcademyOS দিয়ে।" : "with AcademyOS.",
+        desc: isBN
+          ? "একটি মাল্টি-টেন্যান্ট প্ল্যাটফর্ম—স্টুডেন্ট লাইফসাইকেল, ব্যাচ ট্র্যাকিং এবং রেভিনিউ টার্মিনাল একসাথে। এলিট ইনস্টিটিউটের জন্য ডিজাইন করা।"
+          : "A multi-tenant platform used to manage student lifecycles, from simple batch tracking to complex revenue terminals. Designed for elite institutes.",
+        ctaPrimary: isBN ? "শুরু করুন" : "Start Now",
+        ctaSecondary: isBN ? "ডেমো দেখুন" : "Watch the demo",
+      },
+
+      sections: {
+        coreTitleA: isBN ? "কোর" : "Core",
+        coreTitleB: isBN ? "মডিউল" : "Modules",
+        systemOnline: isBN ? "সিস্টেম অনলাইন" : "System Online",
+
+        pricingBadge: isBN ? "এন্টারপ্রাইজ নোড" : "Enterprise Node",
+        pricingTitleA: isBN ? "ইয়ারলি" : "Yearly",
+        pricingTitleB: isBN ? "প্রো" : "Pro",
+        pricingSub: isBN ? "/ নোড / বছর" : "/ Node / Yr",
+        pricingBtn: isBN ? "ইনস্ট্যান্স চালু করুন" : "Provision Instance",
+
+        faqBadge: isBN ? "সাপোর্ট নোড" : "Support Node",
+        faqTitleA: isBN ? "সাধারণ" : "General",
+        faqTitleB: isBN ? "প্রটোকল" : "Protocols",
+        faqDesc: isBN
+          ? "AcademyOS মাল্টি-টেন্যান্ট আর্কিটেকচার, ডিপ্লয়মেন্ট এবং সিকিউরিটি সম্পর্কে গুরুত্বপূর্ণ তথ্য।"
+          : "Technical insights into the AcademyOS multi-tenant architecture, deployment cycles, and security.",
+        kbTitle: isBN ? "নলেজ বেস v2.4" : "Knowledge Base v2.4",
+        kbStatus: isBN ? "সব সিস্টেম সিঙ্কড" : "All Systems Synced",
+
+        contactBadge: isBN ? "যোগাযোগ করুন" : "Get in Touch",
+        contactTitle: isBN ? "সেটআপ ডেমো" : "Setup Demo",
+        contactTitle2: isBN ? "লাগবে?" : "Need a",
+        contactDesc: isBN
+          ? "আপনার কোচিং নোড প্রভিশন এবং কনফিগার করতে আমাদের ইউনিট সাহায্য করবে।"
+          : "Our infrastructure unit is available to help you provision and configure your coaching node.",
+        phoneLabel: isBN ? "ফোন সাপোর্ট" : "Phone Support",
+        emailLabel: isBN ? "সিস্টেম ইমেইল" : "System Email",
+
+        ctaRightTitle: isBN
+          ? "আজই প্রভিশনিং শুরু করুন।"
+          : "Start Provisioning Today.",
+        ctaRightDesc: isBN
+          ? "কোচিং নোড কনফিগার করুন, স্টুডেন্ট এড করুন, ফি কালেক্ট করুন—প্রফেশনাল রিপোর্টিং সহ।"
+          : "Configure your coaching node, enroll students, and collect fees with professional reporting in minutes.",
+        registerNow: isBN ? "রেজিস্টার করুন" : "Register Now",
+        portal: isBN ? "পোর্টাল" : "Portal Access",
+
+        footerTop: isBN ? "উপরে" : "Top",
+        footerPortal: isBN ? "পোর্টাল" : "Portal",
+        footerNode: isBN ? "নোড" : "Node",
+        footerCopy: isBN
+          ? "© ২০২৬ ইনফ্রাস্ট্রাকচার ইউনিট"
+          : "© 2026 INFRASTRUCTURE UNIT",
+      },
+
+      pricing: {
+        bullets: isBN
+          ? [
+              "আনলিমিটেড স্টুডেন্ট",
+              "PDF রিপোর্ট",
+              "RBAC কন্ট্রোল",
+              "ইনস্ট্যান্ট সিঙ্ক",
+            ]
+          : [
+              "Unlimited Students",
+              "PDF Reports",
+              "RBAC Control",
+              "Instant Sync",
+            ],
+        techTitle: isBN ? "টেকনিক্যাল স্পেকস" : "Technical Specs",
+        techFooter: isBN
+          ? "ডাটা আইসোলেশন প্রটোকল সক্রিয়: রেজিস্ট্রি ক্লাস্টার v2.4 সুরক্ষা চালু।"
+          : "Data isolation protocol active: Registry cluster v2.4 protection enabled.",
+      },
+    }),
+    [isBN],
+  );
 
   const coreFeatures = useMemo(
     () => [
       {
         icon: <Users size={24} />,
         title: "Student Lifecycle",
+        titleBn: "স্টুডেন্ট লাইফসাইকেল",
         desc: "Orchestrate registry with high-density profiles, batch transitions, and historical logs. Keep every detail of the student journey synchronized.",
+        descBn:
+          "হাই-ডেনসিটি প্রোফাইল, ব্যাচ ট্রানজিশন এবং হিস্টোরিক্যাল লগসহ রেজিস্ট্রি ম্যানেজ করুন। স্টুডেন্ট জার্নির প্রতিটি ডিটেইল সিঙ্ক থাকবে।",
         tag: "REGISTRY",
+        tagBn: "রেজিস্ট্রি",
         color: "from-blue-600/20 via-indigo-500/10 to-transparent",
         status: "Operational",
+        statusBn: "চলমান",
         metrics: "Live Data Node",
+        metricsBn: "লাইভ ডাটা নোড",
         featureId: "01",
       },
       {
         icon: <CreditCard size={24} />,
         title: "Revenue Terminal",
+        titleBn: "রেভিনিউ টার্মিনাল",
         desc: "Automated ledger tracking and due monitoring with secure TrxID verification for bKash and Nagad payment gateways.",
+        descBn:
+          "অটোমেটেড লেজার ট্র্যাকিং এবং ডিউ মনিটরিং—bKash/Nagad ট্রানজ্যাকশনের জন্য সিকিউর TrxID ভেরিফিকেশন সহ।",
         tag: "FINANCE",
+        tagBn: "ফাইন্যান্স",
         color: "from-emerald-600/20 via-teal-500/10 to-transparent",
         status: "Synced",
+        statusBn: "সিঙ্কড",
         metrics: "Ledger Active",
+        metricsBn: "লেজার অ্যাক্টিভ",
         featureId: "02",
       },
       {
         icon: <FileBarChart size={24} />,
         title: "Audit Exports",
+        titleBn: "অডিট এক্সপোর্ট",
         desc: "Generate professional, audit-grade PDF reports for revenue statements and rosters instantly. Ready for digital or print distribution.",
+        descBn:
+          "রেভিনিউ স্টেটমেন্ট ও রোস্টারের জন্য প্রফেশনাল, অডিট-গ্রেড PDF রিপোর্ট এক ক্লিকে। ডিজিটাল বা প্রিন্টের জন্য প্রস্তুত।",
         tag: "REPORTING",
+        tagBn: "রিপোর্টিং",
         color: "from-rose-600/20 via-orange-500/10 to-transparent",
         status: "Ready",
+        statusBn: "প্রস্তুত",
         metrics: "PDF Engine v2",
+        metricsBn: "PDF ইঞ্জিন v2",
         featureId: "03",
       },
     ],
@@ -71,12 +196,32 @@ export default function HomePage() {
 
   const proFeatures = useMemo(
     () => [
-      { icon: <Database size={18} />, text: "Isolated Data Node" },
-      { icon: <Fingerprint size={18} />, text: "RBAC Security" },
-      { icon: <Server size={18} />, text: "Cloud Architecture" },
-      { icon: <Lock size={18} />, text: "Token Auth" },
-      { icon: <Zap size={18} />, text: "Instant Sync" },
-      { icon: <PhoneCall size={18} />, text: "Priority Support" },
+      {
+        icon: <Database size={18} />,
+        text: "Isolated Data Node",
+        textBn: "আইসোলেটেড ডাটা নোড",
+      },
+      {
+        icon: <Fingerprint size={18} />,
+        text: "RBAC Security",
+        textBn: "RBAC সিকিউরিটি",
+      },
+      {
+        icon: <Server size={18} />,
+        text: "Cloud Architecture",
+        textBn: "ক্লাউড আর্কিটেকচার",
+      },
+      { icon: <Lock size={18} />, text: "Token Auth", textBn: "টোকেন অথ" },
+      {
+        icon: <Zap size={18} />,
+        text: "Instant Sync",
+        textBn: "ইনস্ট্যান্ট সিঙ্ক",
+      },
+      {
+        icon: <PhoneCall size={18} />,
+        text: "Priority Support",
+        textBn: "প্রায়োরিটি সাপোর্ট",
+      },
     ],
     [],
   );
@@ -85,23 +230,33 @@ export default function HomePage() {
     () => [
       {
         q: "Is AcademyOS architecture multi-tenant ready?",
+        qBn: "AcademyOS কি মাল্টি-টেন্যান্ট আর্কিটেকচারের জন্য প্রস্তুত?",
         a: "Absolutely. AcademyOS is engineered as a multi-tenant infrastructure. Each coaching center operates on an isolated data node, ensuring complete privacy, security, and independent database logic for every instance.",
+        aBn: "অবশ্যই। AcademyOS মাল্টি-টেন্যান্ট ইনফ্রাস্ট্রাকচার হিসেবে তৈরি। প্রতিটি কোচিং সেন্টার আলাদা ডাটা নোডে চলে—পূর্ণ প্রাইভেসি, সিকিউরিটি এবং ইনডিপেনডেন্ট ডাটাবেস লজিক নিশ্চিত।",
       },
       {
         q: "How is the subscription verification handled?",
+        qBn: "সাবস্ক্রিপশন ভেরিফিকেশন কীভাবে হয়?",
         a: "The process is streamlined: Center Admins submit digital payment proofs (Method, Sender Number, and TrxID). Our Super Admin node verifies the transaction protocol, activating full yearly access within minutes.",
+        aBn: "প্রসেসটি সহজ: সেন্টার অ্যাডমিন পেমেন্ট প্রুফ সাবমিট করে (Method, Sender Number, TrxID)। সুপার অ্যাডমিন নোড ভেরিফাই করে কয়েক মিনিটের মধ্যেই ইয়ারলি অ্যাক্সেস অ্যাক্টিভ করে।",
       },
       {
         q: "Does the system support mobile orchestration?",
+        qBn: "মোবাইলে কি সিস্টেমটি সহজে ব্যবহার করা যাবে?",
         a: "Yes. All administrative dashboards are built with a 'mobile-first' responsive architecture. Furthermore, the underlying API is designed to integrate seamlessly with future React Native mobile deployments.",
+        aBn: "হ্যাঁ। সব ড্যাশবোর্ড ‘মোবাইল-ফার্স্ট’ রেস্পন্সিভ। পাশাপাশি API এমনভাবে ডিজাইন করা—ভবিষ্যতে React Native অ্যাপের সাথে সহজে ইন্টিগ্রেট হবে।",
       },
       {
         q: "What kind of audit reporting is available?",
+        qBn: "কোন ধরনের রিপোর্ট/অডিট এক্সপোর্ট পাবো?",
         a: "The system features a professional PDF engine. You can instantly generate and export student rosters, detailed revenue ledgers, and monthly defaulter statements—all formatted for professional audits or printing.",
+        aBn: "সিস্টেমে প্রফেশনাল PDF ইঞ্জিন আছে। স্টুডেন্ট রোস্টার, ডিটেইলড লেজার, মাসিক ডিফল্টার স্টেটমেন্ট—সবকিছু অডিট/প্রিন্টের জন্য রেডি ফরম্যাটে এক্সপোর্ট করা যায়।",
       },
       {
         q: "Is my center's data backed up and secure?",
+        qBn: "আমার সেন্টারের ডাটা কি সিকিউর এবং ব্যাকআপ থাকে?",
         a: "Data integrity is our priority. Every node benefits from secure token-based authentication (JWT) and role-based access control (RBAC), ensuring only authorized personnel can sync with your center's data.",
+        aBn: "ডাটা ইন্টিগ্রিটি আমাদের প্রাইওরিটি। JWT টোকেন অথ এবং RBAC ব্যবস্থায় কেবল অথরাইজড ইউজাররাই আপনার সেন্টারের ডাটায় অ্যাক্সেস/সিঙ্ক করতে পারে।",
       },
     ],
     [],
@@ -124,12 +279,16 @@ export default function HomePage() {
         >
           <div className="flex items-center gap-5 md:gap-8">
             <span
-              className={`text-xs font-black transition-colors duration-500 ${isOpen ? "text-indigo-600" : "text-slate-300"}`}
+              className={`text-xs font-black transition-colors duration-500 ${
+                isOpen ? "text-indigo-600" : "text-slate-300"
+              }`}
             >
               0{index}
             </span>
             <h3
-              className={`text-lg md:text-xl font-[900] tracking-tight leading-tight transition-colors duration-500 ${isOpen ? "text-slate-900" : "text-slate-700"}`}
+              className={`text-lg md:text-xl font-[900] tracking-tight leading-tight transition-colors duration-500 ${
+                isOpen ? "text-slate-900" : "text-slate-700"
+              }`}
             >
               {question}
             </h3>
@@ -146,7 +305,6 @@ export default function HomePage() {
           </div>
         </button>
 
-        {/* Expandable Content Section */}
         <div
           className={`overflow-hidden transition-all duration-500 ease-in-out ${
             isOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
@@ -173,8 +331,17 @@ export default function HomePage() {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  // Optional: close mobile menu when language changes
+  useEffect(() => {
+    if (mobileOpen) setMobileOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
+
   return (
-    <div className="relative min-h-screen bg-[#F8FAFF] text-slate-900 selection:bg-indigo-100 overflow-x-hidden font-sans">
+    <div
+      id="top"
+      className="relative min-h-screen bg-[#F8FAFF] text-slate-900 selection:bg-indigo-100 overflow-x-hidden font-sans"
+    >
       {/* 1. TECHNICAL BACKGROUND */}
       <div className="fixed inset-0 -z-20 overflow-hidden pointer-events-none">
         <div className="absolute top-[5%] left-[-10%] w-[40rem] h-[40rem] bg-indigo-200/20 blur-[120px] rounded-full animate-pulse" />
@@ -193,54 +360,118 @@ export default function HomePage() {
           <button
             onClick={() => scrollTo("#top")}
             className="flex items-center gap-3"
+            aria-label="Go to top"
           >
-            <img src={logo} alt="Logo" className="h-15 w-15 object-contain" />
+            <img src={logo} alt="Logo" className="h-14 w-14 object-contain" />
             <div className="text-left hidden sm:block">
               <div className="text-xl font-[1000] tracking-tighter uppercase leading-none">
                 Academy<span className="text-indigo-600">OS</span>
               </div>
               <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                Infrastructure Unit
+                {isBN ? "ইনফ্রাস্ট্রাকচার ইউনিট" : "Infrastructure Unit"}
               </div>
             </div>
           </button>
 
+          {/* Desktop Links */}
           <div className="hidden md:flex items-center gap-10">
-            {["Features", "Pricing", "FAQ", "Contact"].map((link) => (
+            {[
+              { key: "features", label: t.nav.features },
+              { key: "pricing", label: t.nav.pricing },
+              { key: "faq", label: t.nav.faq },
+              { key: "contact", label: t.nav.contact },
+            ].map((link) => (
               <button
-                key={link}
-                onClick={() => scrollTo(`#${link.toLowerCase()}`)}
+                key={link.key}
+                onClick={() => scrollTo(`#${link.key}`)}
                 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-indigo-600 transition-colors"
               >
-                {link}
+                {link.label}
               </button>
             ))}
+
+            {/* ✅ Language Switch */}
+            <button
+              onClick={() => setLang((p) => (p === "bn" ? "en" : "bn"))}
+              className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
+              aria-label="Toggle language"
+            >
+              {isBN ? "BN ✓" : "EN ✓"} <span className="text-slate-300">|</span>{" "}
+              {isBN ? "EN" : "BN"}
+            </button>
+
             <Link
               to="/login"
               className="px-6 py-3 rounded-xl bg-slate-900 text-white hover:bg-indigo-600 transition-all text-[11px] font-black uppercase tracking-widest shadow-xl"
             >
-              Portal Access
+              {t.nav.portalAccess}
             </Link>
           </div>
 
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 text-slate-900"
-          >
-            <Menu size={24} />
-          </button>
+          {/* Mobile Actions */}
+          <div className="md:hidden flex items-center gap-2">
+            <button
+              onClick={() => setLang((p) => (p === "bn" ? "en" : "bn"))}
+              className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-[10px] font-black uppercase tracking-widest"
+              aria-label="Toggle language"
+            >
+              {isBN ? "BN" : "EN"}
+            </button>
+
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="p-2 text-slate-900"
+              aria-label="Open menu"
+            >
+              <Menu size={24} />
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Dropdown */}
+        {mobileOpen ? (
+          <div className="md:hidden mt-4 px-2 pb-3">
+            <div className="rounded-2xl bg-white border border-slate-200 shadow-xl overflow-hidden">
+              <div className="p-3 grid grid-cols-2 gap-2">
+                {[
+                  { key: "features", label: t.nav.features },
+                  { key: "pricing", label: t.nav.pricing },
+                  { key: "faq", label: t.nav.faq },
+                  { key: "contact", label: t.nav.contact },
+                ].map((link) => (
+                  <button
+                    key={link.key}
+                    onClick={() => {
+                      scrollTo(`#${link.key}`);
+                      setMobileOpen(false);
+                    }}
+                    className="px-4 py-3 rounded-xl bg-slate-50 text-slate-700 text-[11px] font-black uppercase tracking-widest hover:bg-indigo-50 hover:text-indigo-700 transition-all"
+                  >
+                    {link.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-3 border-t border-slate-100">
+                <Link
+                  to="/login"
+                  className="block w-full text-center px-6 py-3 rounded-xl bg-slate-900 text-white hover:bg-indigo-600 transition-all text-[11px] font-black uppercase tracking-widest shadow-xl"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {t.nav.portalAccess}
+                </Link>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </nav>
 
-      {/* 3. HERO: VIBRANT 3D PORTAL DESIGN */}
+      {/* 3. HERO */}
       <header className="relative px-6 pt-24 pb-32 md:pt-40 md:pb-56 overflow-hidden">
-        {/* --- 3D AMBIENT BACKGROUND --- */}
         <div className="absolute inset-0 -z-10 pointer-events-none">
-          {/* Soft Mesh Gradients inspired by the image */}
           <div className="absolute top-[-10%] left-[-5%] w-[50rem] h-[50rem] bg-indigo-100/40 blur-[120px] rounded-full animate-pulse" />
           <div className="absolute bottom-[0%] left-[10%] w-[30rem] h-[30rem] bg-rose-100/30 blur-[100px] rounded-full opacity-60" />
 
-          {/* Animated Floating Assets - Use your 3D assets or Lucide icons with glass backgrounds */}
           <div className="hidden lg:block absolute top-[25%] left-[8%] animate-[float_6s_infinite_ease-in-out]">
             <div className="p-6 bg-white/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/60 shadow-2xl rotate-[-12deg]">
               <Users size={48} className="text-indigo-600" />
@@ -253,7 +484,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Stylized Path Arrow like the Brainskuy image */}
           <svg
             className="absolute top-[40%] right-[15%] w-64 opacity-20 hidden xl:block"
             viewBox="0 0 200 100"
@@ -275,25 +505,22 @@ export default function HomePage() {
         </div>
 
         <div className="mx-auto max-w-7xl grid lg:grid-cols-2 gap-16 items-center relative z-10">
-          {/* LEFT SIDE: Content */}
           <div className="text-left space-y-8 md:space-y-10">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/80 backdrop-blur-md px-5 py-2 text-xs font-bold text-indigo-600 shadow-lg border border-indigo-50">
-              <Sparkles size={16} /> New Node Infrastructure Active
+              <Sparkles size={16} /> {t.hero.badge}
             </div>
 
             <h1 className="text-3xl md:text-5xl font-[1000] tracking-tight leading-[1.1] text-slate-900">
-              Coaching management <br />
-              <span className="text-indigo-600">easy & fast</span> with <br />
+              {t.hero.title1} <br />
+              <span className="text-indigo-600">{t.hero.title2}</span> <br />
               <span className="relative inline-block">
-                AcademyOS.
+                {t.hero.title3}
                 <div className="absolute bottom-2 left-0 w-full h-3 bg-indigo-100 -z-10 rounded-full" />
               </span>
             </h1>
 
             <p className="max-w-xl text-lg md:text-xl text-slate-500 font-medium leading-relaxed">
-              A multi-tenant platform used to manage student lifecycles, from
-              simple batch tracking to complex revenue terminals. Designed for
-              elite institutes.
+              {t.hero.desc}
             </p>
 
             <div className="flex flex-wrap items-center gap-6 pt-4">
@@ -301,31 +528,28 @@ export default function HomePage() {
                 to="/register"
                 className="px-10 py-5 rounded-2xl bg-indigo-600 text-white font-bold text-base hover:bg-slate-900 transition-all shadow-[0_20px_40px_rgba(79,70,229,0.3)] active:scale-95 flex items-center gap-2"
               >
-                Start Now <ArrowRight size={20} />
+                {t.hero.ctaPrimary} <ArrowRight size={20} />
               </Link>
 
               <button className="flex items-center gap-3 text-slate-900 font-bold text-base hover:text-indigo-600 transition-colors group">
                 <div className="h-12 w-12 rounded-full border-2 border-slate-200 flex items-center justify-center group-hover:border-indigo-600 transition-colors">
                   <Zap size={20} className="fill-current" />
                 </div>
-                Watch the demo
+                {t.hero.ctaSecondary}
               </button>
             </div>
           </div>
 
-          {/* RIGHT SIDE: 3D Visualization Placeholder */}
           <div className="relative hidden lg:block">
-            {/* If you have a 3D character/object like the Brainskuy image, place it here */}
             <div className="relative z-10 animate-[float_5s_infinite_ease-in-out]">
-              <div className="w-full aspect-square  flex items-center justify-center overflow-hidden">
+              <div className="w-full aspect-square flex items-center justify-center overflow-hidden">
                 <img
                   src={hero}
                   alt="hero-image"
-                  className="h-full w-full object-contain "
+                  className="h-full w-full object-contain"
                 />
               </div>
             </div>
-            {/* Floating Light Bulbs/Dots like in the reference image */}
             <div className="absolute top-10 right-10 w-12 h-12 bg-yellow-300 rounded-full blur-xl animate-pulse" />
             <div className="absolute bottom-20 left-0 w-8 h-8 bg-indigo-400 rounded-full blur-lg animate-pulse delay-700" />
           </div>
@@ -334,11 +558,11 @@ export default function HomePage() {
         <style
           dangerouslySetInnerHTML={{
             __html: `
-                    @keyframes float {
-                    0%, 100% { transform: translateY(0px); }
-                    50% { transform: translateY(-30px); }
-                  }
-                `,
+              @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-30px); }
+              }
+            `,
           }}
         />
       </header>
@@ -351,11 +575,14 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl">
           <div className="flex items-center justify-between mb-16">
             <h2 className="text-3xl md:text-5xl font-[1000] uppercase tracking-tighter leading-none">
-              Core <span className="text-indigo-600 italic">Modules</span>
+              {t.sections.coreTitleA}{" "}
+              <span className="text-indigo-600 italic">
+                {t.sections.coreTitleB}
+              </span>
             </h2>
             <div className="hidden sm:flex items-center gap-3 text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />{" "}
-              System Online
+              {t.sections.systemOnline}
             </div>
           </div>
 
@@ -372,19 +599,23 @@ export default function HomePage() {
                   <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center text-slate-900 shadow-sm border border-slate-100 mb-8 group-hover:scale-110 transition-transform">
                     {f.icon}
                   </div>
+
                   <span className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400">
-                    {f.tag} PROTOCOL
+                    {isBN ? f.tagBn : f.tag} {isBN ? "প্রটোকল" : "PROTOCOL"}
                   </span>
+
                   <h3 className="text-2xl font-[1000] uppercase mt-2 mb-4 tracking-tighter">
-                    {f.title}
+                    {isBN ? f.titleBn : f.title}
                   </h3>
+
                   <p className="text-slate-600 text-base leading-relaxed font-medium italic mb-8">
-                    {f.desc}
+                    {isBN ? f.descBn : f.desc}
                   </p>
                 </div>
+
                 <div className="relative z-10 flex items-center justify-between pt-6 border-t border-slate-200/50">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    {f.metrics}
+                    {isBN ? f.metricsBn : f.metrics}
                   </span>
                   <ChevronRight
                     size={20}
@@ -403,59 +634,64 @@ export default function HomePage() {
           <div className="grid lg:grid-cols-2 gap-0 items-stretch bg-slate-900 rounded-[4rem] overflow-hidden shadow-2xl">
             <div className="p-12 sm:p-20 text-white space-y-10">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-black text-blue-400 uppercase tracking-widest">
-                <Sparkles size={12} /> Enterprise Node
+                <Sparkles size={12} /> {t.sections.pricingBadge}
               </div>
+
               <h2 className="text-4xl font-[1000] uppercase tracking-tighter leading-none">
-                Yearly <span className="text-blue-400">Pro</span>
+                {t.sections.pricingTitleA}{" "}
+                <span className="text-blue-400">
+                  {t.sections.pricingTitleB}
+                </span>
               </h2>
+
               <div className="flex items-baseline gap-2">
                 <span className="text-7xl font-[1000] tracking-tighter text-blue-400">
                   ৳{YEARLY_PRICE}
                 </span>
                 <span className="text-slate-500 font-black uppercase text-[10px] tracking-[0.2em]">
-                  / Node / Yr
+                  {t.sections.pricingSub}
                 </span>
               </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
-                {[
-                  "Unlimited Students",
-                  "PDF Reports",
-                  "RBAC Control",
-                  "Instant Sync",
-                ].map((t) => (
+                {t.pricing.bullets.map((tItem) => (
                   <div
-                    key={t}
+                    key={tItem}
                     className="flex items-center gap-3 text-sm font-bold text-slate-300"
                   >
-                    <CheckCircle2 size={18} className="text-emerald-400" /> {t}
+                    <CheckCircle2 size={18} className="text-emerald-400" />{" "}
+                    {tItem}
                   </div>
                 ))}
               </div>
+
               <Link
                 to="/register"
                 className="block w-full py-5 rounded-2xl bg-white text-slate-900 font-[1000] uppercase text-center text-xs tracking-[0.2em] hover:bg-blue-400 transition-all shadow-xl"
               >
-                Provision Instance
+                {t.sections.pricingBtn}
               </Link>
             </div>
+
             <div className="p-12 sm:p-20 bg-white/5 backdrop-blur-3xl border-l border-white/5 flex flex-col justify-center space-y-10">
               <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.4em]">
-                Technical Specs
+                {t.pricing.techTitle}
               </h4>
+
               <div className="grid grid-cols-2 gap-8">
                 {proFeatures.map((feat, i) => (
                   <div key={i} className="flex items-center gap-3">
                     <div className="text-blue-400 shrink-0">{feat.icon}</div>
                     <span className="text-[11px] font-[900] text-slate-200 uppercase tracking-widest leading-tight">
-                      {feat.text}
+                      {isBN ? feat.textBn : feat.text}
                     </span>
                   </div>
                 ))}
               </div>
+
               <div className="pt-8 border-t border-white/5">
                 <p className="text-[11px] font-bold text-slate-500 leading-relaxed uppercase tracking-widest italic">
-                  Data isolation protocol active: Registry cluster v2.4
-                  protection enabled.
+                  {t.pricing.techFooter}
                 </p>
               </div>
             </div>
@@ -468,48 +704,45 @@ export default function HomePage() {
         id="faq"
         className="px-4 sm:px-6 py-20 md:py-32 bg-white border-y border-slate-100 relative overflow-hidden"
       >
-        {/* Abstract Background Accents */}
         <div className="absolute top-0 right-0 w-[30rem] h-[30rem] bg-indigo-50/50 blur-[120px] rounded-full pointer-events-none" />
 
         <div className="mx-auto max-w-7xl relative z-10">
           <div className="grid lg:grid-cols-12 gap-12 lg:gap-20">
-            {/* LEFT SIDE: Section Branding */}
             <div className="lg:col-span-4 space-y-6 md:sticky md:top-32 h-fit">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px] font-black uppercase tracking-widest">
-                <MessageSquare size={14} /> Support Node
+                <MessageSquare size={14} /> {t.sections.faqBadge}
               </div>
+
               <h2 className="text-4xl md:text-6xl font-[1000] uppercase tracking-tighter leading-[0.9] text-slate-900">
-                General <br />
+                {t.sections.faqTitleA} <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-500 italic">
-                  Protocols
+                  {t.sections.faqTitleB}
                 </span>
               </h2>
+
               <p className="text-lg md:text-xl text-slate-500 font-medium italic leading-relaxed max-w-sm">
-                Technical insights into the AcademyOS multi-tenant architecture,
-                deployment cycles, and security.
+                {t.sections.faqDesc}
               </p>
 
-              {/* Technical Status Indicator (Desktop Only) */}
               <div className="pt-8 hidden lg:block">
                 <div className="p-6 rounded-[2.5rem] bg-slate-50 border border-slate-100">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                    Knowledge Base v2.4
+                    {t.sections.kbTitle}
                   </p>
                   <div className="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-tight">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />{" "}
-                    All Systems Synced
+                    {t.sections.kbStatus}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* RIGHT SIDE: Interactive FAQ List */}
             <div className="lg:col-span-8 space-y-4">
               {faqs.map((f, idx) => (
                 <FAQItem
                   key={idx}
-                  question={f.q}
-                  answer={f.a}
+                  question={isBN ? f.qBn : f.q}
+                  answer={isBN ? f.aBn : f.a}
                   index={idx + 1}
                 />
               ))}
@@ -519,25 +752,25 @@ export default function HomePage() {
       </section>
 
       {/* 7. CONTACT */}
-      {/* 7. CONTACT SECTION: RESPONSIVE INFRASTRUCTURE HUB */}
       <section
         id="contact"
         className="px-4 sm:px-6 py-20 md:py-32 bg-[#F8FAFF]"
       >
         <div className="mx-auto max-w-6xl">
           <div className="rounded-[2.5rem] md:rounded-[4rem] bg-white border border-slate-100 shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-2">
-            {/* Left Column: Contact Details */}
             <div className="p-8 sm:p-12 md:p-20 space-y-8 md:space-y-10">
               <div className="space-y-4 md:space-y-6">
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px] font-black uppercase tracking-widest">
-                  <MessageSquare size={14} /> Get in Touch
+                  <MessageSquare size={14} /> {t.sections.contactBadge}
                 </div>
+
                 <h3 className="text-3xl md:text-5xl font-[1000] tracking-tighter uppercase leading-[0.9] text-slate-900">
-                  Need a <br className="hidden sm:block" /> Setup Demo?
+                  {t.sections.contactTitle2} <br className="hidden sm:block" />{" "}
+                  {t.sections.contactTitle}
                 </h3>
+
                 <p className="text-base md:text-lg text-slate-500 font-medium italic leading-relaxed">
-                  Our infrastructure unit is available to help you provision and
-                  configure your coaching node.
+                  {t.sections.contactDesc}
                 </p>
               </div>
 
@@ -545,13 +778,13 @@ export default function HomePage() {
                 {[
                   {
                     icon: <Phone size={20} />,
-                    label: "Phone Support",
+                    label: t.sections.phoneLabel,
                     val: "01684516151",
                     href: "tel:01684516151",
                   },
                   {
                     icon: <Mail size={20} />,
-                    label: "System Email",
+                    label: t.sections.emailLabel,
                     val: "arifurrahman.now@gmail.com",
                     href: "mailto:arifurrahman.now@gmail.com",
                   },
@@ -565,8 +798,6 @@ export default function HomePage() {
                       {item.icon}
                     </div>
                     <div className="min-w-0">
-                      {" "}
-                      {/* Prevents text overflow on small screens */}
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
                         {item.label}
                       </p>
@@ -579,9 +810,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right Column: CTA Block */}
             <div className="p-10 sm:p-12 md:p-20 bg-slate-900 text-white flex flex-col justify-center text-center space-y-8 relative overflow-hidden">
-              {/* Subtle Background Pattern */}
               <div
                 className="absolute inset-0 opacity-10 pointer-events-none"
                 style={{
@@ -592,11 +821,10 @@ export default function HomePage() {
 
               <div className="relative z-10 space-y-6">
                 <h4 className="text-3xl md:text-4xl lg:text-5xl font-[1000] uppercase tracking-tighter leading-tight italic">
-                  Start Provisioning <br /> Today.
+                  {t.sections.ctaRightTitle}
                 </h4>
                 <p className="text-slate-400 text-sm md:text-base font-medium italic max-w-md mx-auto">
-                  Configure your coaching node, enroll students, and collect
-                  fees with professional reporting in minutes.
+                  {t.sections.ctaRightDesc}
                 </p>
               </div>
 
@@ -605,13 +833,13 @@ export default function HomePage() {
                   to="/register"
                   className="px-8 md:px-10 py-4 md:py-5 bg-white text-slate-900 rounded-xl font-[1000] uppercase text-xs tracking-widest hover:bg-blue-400 transition-all flex items-center justify-center gap-2 shadow-xl active:scale-95"
                 >
-                  Register Now <ExternalLink size={16} />
+                  {t.sections.registerNow} <ExternalLink size={16} />
                 </Link>
                 <Link
                   to="/login"
                   className="px-8 md:px-10 py-4 md:py-5 bg-white/10 text-white border border-white/20 rounded-xl font-[1000] uppercase text-xs tracking-widest hover:bg-white/20 transition-all active:scale-95"
                 >
-                  Portal Access
+                  {t.sections.portal}
                 </Link>
               </div>
             </div>
@@ -627,26 +855,27 @@ export default function HomePage() {
               AcademyOS
             </span>
           </div>
+
           <div className="flex gap-10 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
             <button
               onClick={() => scrollTo("#top")}
               className="hover:text-indigo-600 transition-colors"
             >
-              Top
+              {t.sections.footerTop}
             </button>
             <Link
               to="/login"
               className="hover:text-indigo-600 transition-colors"
             >
-              Portal
+              {t.sections.footerPortal}
             </Link>
             <Link
               to="/register"
               className="hover:text-indigo-600 transition-colors"
             >
-              Node
+              {t.sections.footerNode}
             </Link>
-            <span>© 2026 INFRASTRUCTURE UNIT</span>
+            <span>{t.sections.footerCopy}</span>
           </div>
         </div>
       </footer>
