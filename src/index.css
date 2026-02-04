@@ -1,19 +1,9 @@
 @import "tailwindcss";
 
-/* src/App.css এ এটি আপডেট করুন */
-/* App.css এ পরিবর্তন করুন */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-bn:
-    "Hind Siliguri", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
+  --font-bangla: "Hind Siliguri", sans-serif;
 }
 
-/* ডিফল্ট ফন্ট হিসেবে বাংলা সেট করা */
-html {
-  font-family: var(--font-bn);
-}
-
-/* ইংরেজি মোডের জন্য */
-html.lang-en {
-  font-family: var(--font-sans);
+body {
+  font-family: "Hind Siliguri", sans-serif;
 }
