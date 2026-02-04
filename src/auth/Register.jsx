@@ -1,24 +1,22 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
-  School,
   Globe,
   Mail,
   Lock,
   Phone,
   ArrowRight,
-  ShieldCheck,
   Zap,
   Activity,
+  Server,
+  Fingerprint,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import Button from "../components/Button";
+import logo from "../assets/academyos-logo.png"; // Original logo path
 
-/**
- * @desc    Modern Compact Node Registration
- * Optimized for multi-tenant provisioning with high-density UI.
- */
 const Register = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -47,77 +45,129 @@ const Register = () => {
       toast.success("Institute node provisioned successfully.");
       navigate("/login");
     } catch (err) {
-      const msg =
-        err.response?.data?.message ||
-        "Provisioning failed. Check slug availability.";
+      const msg = err.response?.data?.message || "Provisioning failed.";
       toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FAFBFF] px-4 py-12 selection:bg-blue-100 selection:text-blue-900">
-      <div className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-        {/* Left Side: System Information (Hidden on mobile) */}
-        <div className="hidden lg:flex lg:col-span-5 flex-col space-y-8 pr-8">
-          <div className="space-y-4">
-            <div className="inline-flex p-3 bg-slate-900 rounded-2xl text-white shadow-xl">
-              <School size={28} />
-            </div>
-            <h1 className="text-4xl font-[950] text-slate-900 tracking-tighter uppercase leading-none">
-              Academy<span className="text-blue-600">OS</span>
-            </h1>
-            <p className="text-sm font-medium text-slate-500 italic leading-relaxed">
-              "Deploy localized nodes with enterprise-grade security and
-              automated ledger logic instantly."
-            </p>
-          </div>
+  const floatingBlocks = Array.from({ length: 10 });
 
-          <div className="space-y-4">
-            <FeatureItem icon={<Zap size={14} />} text="Instant Node Sync" />
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#FAFBFF] px-4 py-12 selection:bg-blue-100 selection:text-blue-900 overflow-hidden relative font-bangla">
+      {/* Animated Background Blocks */}
+      <div className="absolute inset-0 -z-10 pointer-events-none">
+        {floatingBlocks.map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{
+              opacity: [0.03, 0.08, 0.03],
+              x: [
+                Math.random() * 100,
+                Math.random() * -100,
+                Math.random() * 100,
+              ],
+              y: [
+                Math.random() * 100,
+                Math.random() * -100,
+                Math.random() * 100,
+              ],
+              rotate: [0, 180, 360],
+            }}
+            transition={{
+              duration: 25 + i * 2,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+            className="absolute bg-blue-500/10 border border-blue-400/5 rounded-[2.5rem]"
+            style={{
+              width: `${100 + i * 40}px`,
+              height: `${100 + i * 40}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+          />
+        ))}
+        <div className="absolute top-[-20%] left-[-10%] h-[60%] w-[60%] rounded-full bg-indigo-100/30 blur-[140px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] h-[60%] w-[60%] rounded-full bg-blue-100/30 blur-[140px]" />
+      </div>
+
+      <div className="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
+        {/* Left Side: System Information & Logo */}
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+          className="lg:col-span-5 flex flex-col items-center lg:items-start space-y-10"
+        >
+          {/* Logo visible on both mobile and desktop */}
+          <Link
+            to="/"
+            className="flex flex-col items-center lg:items-start gap-6 group"
+          >
+            <div className="relative">
+              <div className="absolute -inset-4 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all" />
+              <img
+                src={logo}
+                alt="AcademyOS"
+                className="w-20 h-20 lg:w-24 lg:h-24 object-contain relative z-10 drop-shadow-2xl group-hover:scale-105 transition-transform duration-500"
+              />
+            </div>
+            <div className="text-center lg:text-left space-y-2">
+              <h1 className="text-4xl lg:text-5xl font-[950] text-slate-900 tracking-tighter uppercase leading-none">
+                Academy<span className="text-blue-600">OS</span>
+              </h1>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] ml-1">
+                Infrastructure Provisioning
+              </p>
+            </div>
+          </Link>
+
+          {/* Desktop Only Features */}
+          <div className="hidden lg:flex flex-col space-y-4">
+            <p className="text-base font-medium text-slate-500 leading-relaxed max-w-sm mb-4">
+              Deploy{" "}
+              <span className="text-slate-900 font-bold">localized nodes</span>{" "}
+              with enterprise-grade security instantly.
+            </p>
             <FeatureItem
-              icon={<Lock size={14} />}
+              icon={<Zap size={14} />}
+              text="Instant Node Sync"
+              delay={0.2}
+            />
+            <FeatureItem
+              icon={<Fingerprint size={14} />}
               text="256-bit AES Encryption"
+              delay={0.3}
             />
             <FeatureItem
               icon={<Activity size={14} />}
               text="Automated Revenue Logic"
+              delay={0.4}
             />
           </div>
-
-          <div className="p-6 bg-blue-50 border border-blue-100 rounded-[2rem]">
-            <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">
-              Status
-            </p>
-            <p className="text-xs font-bold text-blue-900/60">
-              Cluster 2026 is currently accepting new node provisioning.
-            </p>
-          </div>
-        </div>
+        </motion.div>
 
         {/* Right Side: Registration Card */}
-        <div className="lg:col-span-7 w-full">
-          <div className="bg-white border border-slate-100 rounded-[2.5rem] p-6 sm:p-10 shadow-2xl shadow-slate-200/60">
-            <div className="mb-8">
-              <h2 className="text-2xl font-[900] text-slate-900 tracking-tight uppercase">
-                Initialize Node
-              </h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
-                Global Registry Access
-              </p>
-            </div>
-
-            <form onSubmit={handleRegister} className="space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.2 }}
+          className="lg:col-span-7 w-full"
+        >
+          <div className="bg-white/90 backdrop-blur-xl border border-white rounded-[3rem] p-8 sm:p-12 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.06)]">
+            <form onSubmit={handleRegister} className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <InputGroup
                   label="Coaching Identity"
-                  icon={<School size={16} />}
-                  placeholder="Dhaka Science Academy"
+                  icon={<Server size={16} />}
+                  placeholder="Academy Name"
                   onChange={(v) => setFormData({ ...formData, name: v })}
                 />
                 <InputGroup
-                  label="Instance URL Key"
+                  label="URL Key (Slug)"
                   icon={<Globe size={16} />}
                   placeholder="unique-slug"
                   onChange={(v) => setFormData({ ...formData, slug: v })}
@@ -125,14 +175,14 @@ const Register = () => {
               </div>
 
               <InputGroup
-                label="Root Admin Email"
+                label="Primary Admin Email"
                 type="email"
                 icon={<Mail size={16} />}
-                placeholder="admin@institute.com"
+                placeholder="admin@node.os"
                 onChange={(v) => setFormData({ ...formData, email: v })}
               />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <InputGroup
                   label="Security Secret"
                   type="password"
@@ -141,7 +191,7 @@ const Register = () => {
                   onChange={(v) => setFormData({ ...formData, password: v })}
                 />
                 <InputGroup
-                  label="Contact Point"
+                  label="Contact Phone"
                   type="tel"
                   icon={<Phone size={16} />}
                   placeholder="+880..."
@@ -151,42 +201,42 @@ const Register = () => {
                 />
               </div>
 
-              <Button
-                type="submit"
-                isLoading={loading}
-                className="w-full py-5 rounded-2xl bg-slate-900 hover:bg-blue-600 text-white font-[900] uppercase tracking-[0.2em] text-[11px] shadow-xl transition-all flex items-center justify-center gap-2 group mt-4"
-              >
-                Provision Instance{" "}
-                <ArrowRight
-                  size={16}
-                  className="group-hover:translate-x-1 transition-transform"
-                />
-              </Button>
+              <div className="pt-4">
+                <Button
+                  type="submit"
+                  isLoading={loading}
+                  className="w-full py-5 rounded-2xl bg-slate-900 hover:bg-blue-600 text-white font-[900] uppercase tracking-[0.25em] text-[11px] shadow-2xl shadow-blue-900/10 transition-all flex items-center justify-center gap-3 group active:scale-[0.98]"
+                >
+                  Provision Instance
+                  <ArrowRight
+                    size={18}
+                    className="group-hover:translate-x-1 transition-transform"
+                  />
+                </Button>
+              </div>
             </form>
 
-            <div className="mt-8 text-center border-t border-slate-50 pt-6">
+            <div className="mt-10 text-center border-t border-slate-50 pt-8">
               <p className="text-xs text-slate-400 font-bold uppercase tracking-tight">
-                Existing Tenant?{" "}
+                Existing Node?{" "}
                 <Link
                   to="/login"
-                  className="text-blue-600 hover:text-slate-900 transition-colors font-black underline decoration-blue-100 underline-offset-4"
+                  className="text-blue-600 hover:text-slate-900 transition-colors font-black ml-1"
                 >
                   Access Portal
                 </Link>
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
 };
 
-/* --- Sub-Components for Cleanliness --- */
-
 const InputGroup = ({ label, icon, placeholder, type = "text", onChange }) => (
-  <div className="space-y-1.5 group">
-    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+  <div className="space-y-2 group">
+    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
       {label}
     </label>
     <div className="relative">
@@ -197,22 +247,27 @@ const InputGroup = ({ label, icon, placeholder, type = "text", onChange }) => (
         required
         type={type}
         placeholder={placeholder}
-        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-none rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-4 ring-blue-500/5 focus:bg-white transition-all placeholder:text-slate-300"
+        className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:bg-white transition-all placeholder:text-slate-300"
         onChange={(e) => onChange(e.target.value)}
       />
     </div>
   </div>
 );
 
-const FeatureItem = ({ icon, text }) => (
-  <div className="flex items-center gap-3">
-    <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100">
+const FeatureItem = ({ icon, text, delay }) => (
+  <motion.div
+    initial={{ opacity: 0, x: -20 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ delay }}
+    className="flex items-center gap-4"
+  >
+    <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-blue-600 border border-slate-100 shadow-sm">
       {icon}
     </div>
-    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">
+    <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest">
       {text}
     </span>
-  </div>
+  </motion.div>
 );
 
 export default Register;

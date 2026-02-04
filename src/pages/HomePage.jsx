@@ -105,10 +105,10 @@ export default function HomePage() {
           ? "কোচিং সেন্টার কনফিগার করুন, স্টুডেন্ট এড করুন, ফি কালেক্ট করুন—প্রফেশনাল রিপোর্টিং সহ।"
           : "Configure your coaching center, enroll students, and collect fees with professional reporting in minutes.",
         registerNow: isBN ? "রেজিস্টার করুন" : "Register Now",
-        portal: isBN ? "পোর্টাল" : "Portal Access",
+        portal: isBN ? "ড্যাসবোর্ড" : "Dashboard",
 
         footerTop: isBN ? "উপরে" : "Top",
-        footerPortal: isBN ? "পোর্টাল" : "Portal",
+        footerPortal: isBN ? "ড্যাসবোর্ড" : "Dashboard",
         footerNode: isBN ? "নোড" : "Node",
         footerCopy: isBN
           ? "© ২০২৬ ইনফ্রাস্ট্রাকচার ইউনিট"
