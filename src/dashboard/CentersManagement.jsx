@@ -228,7 +228,7 @@ const CentersManagement = () => {
     if (!id) return toast.error("System Error: Node ID Missing");
 
     if (
-      !window.confirm("Permanent Deletion: All data will be purged. Continue?")
+      !window.confirm("Permanent Deletion: All data will be deleted. Continue?")
     )
       return;
 
